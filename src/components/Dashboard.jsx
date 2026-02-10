@@ -7,17 +7,29 @@ import { FocusMode } from "./FocusMode";
 import { BreakdownModal } from "./ai/BreakdownModal";
 import { InterventionModal } from "./ai/InterventionModal";
 import { ClarificationModal } from "./ai/ClarificationModal";
+import { EditTaskModal } from "./EditTaskModal";
+import { CalendarView } from "./CalendarView";
+import { OnboardingModal } from "./OnboardingModal";
+import { AccomplishmentsModal } from "./AccomplishmentsModal";
+import { ChatModal } from "./ai/ChatModal";
 import { aiService } from "../services/ai";
 import { cn } from "../lib/utils";
-import { Radio } from "lucide-react";
+import { Radio, Calendar } from "lucide-react";
 
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 export function Dashboard() {
-    const { tasks, loading, addTask, addMultipleTasks, reorderTasks, completeTask, pinTask, deleteTask, updateTask } = useTasks();
+    const { tasks, loading, addTask, addMultipleTasks, reorderTasks, completeTask, pinTask, deleteTask, updateTask, streak, toggleTimer, startTimer, userName, setUserName, getStats } = useTasks();
     const [showAll, setShowAll] = useState(false);
-    const [isFocusMode, setIsFocusMode] = useState(false);
+    const [focusTaskId, setFocusTaskId] = useState(null); // Fix Bug 29: Specific task focus
+    const [isStatsOpen, setIsStatsOpen] = useState(false);
+    const [chatModal, setChatModal] = useState({
+        isOpen: false,
+        task: null,
+        history: [],
+        loading: false
+    });
 
     // DnD Sensors
     const sensors = useSensors(
@@ -30,6 +42,10 @@ export function Dashboard() {
     // AI Modal State
     const [aiModal, setAiModal] = useState({ isOpen: false, type: null, data: null });
     const [isEvaluating, setIsEvaluating] = useState(false);
+
+    // Edit Modal State
+    const [editModal, setEditModal] = useState({ isOpen: false, taskId: null, currentDescription: "" });
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
     // Filter tasks: Show all tasks (active & completed)
     // Sort: Pinned first, then Pinned Completed(optional), then Active, then Completed
@@ -60,7 +76,12 @@ export function Dashboard() {
     const laterTasks = sortedTasks.filter(t => normalizeDate(t.scheduledDate) > tomorrow);
 
     const visibleTodayTasks = showAll ? todayTasks : todayTasks.slice(0, 5);
-    const hiddenCount = todayTasks.length - 5;
+    const visibleTomorrowTasks = showAll ? tomorrowTasks : tomorrowTasks.slice(0, 5);
+    const visibleLaterTasks = showAll ? laterTasks : laterTasks.slice(0, 5);
+
+    const hiddenCount = (todayTasks.length - visibleTodayTasks.length) +
+        (tomorrowTasks.length - visibleTomorrowTasks.length) +
+        (laterTasks.length - visibleLaterTasks.length);
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
@@ -79,8 +100,14 @@ export function Dashboard() {
     const handleAddTask = async (description) => {
         setIsEvaluating(true);
 
+        const context = {
+            userName,
+            streak,
+            stats: getStats()
+        };
+
         // 1. Evaluate Task
-        const evaluation = await aiService.evaluateTask(description);
+        const evaluation = await aiService.evaluateTask(description, context);
 
         // Handle API error or fallback
         if (evaluation.error) {
@@ -106,7 +133,7 @@ export function Dashboard() {
 
         // 3. If too big, suggest breakdown
         if (!evaluation.canCompleteInOneHour) {
-            const breakdown = await aiService.breakDownTask(description);
+            const breakdown = await aiService.breakDownTask(description, context);
             if (!breakdown.error) {
                 setAiModal({
                     isOpen: true,
@@ -123,12 +150,65 @@ export function Dashboard() {
         setIsEvaluating(false);
     };
 
+    const handleChatOpen = (taskId) => {
+        const task = tasks.find(t => t.id === taskId);
+        if (task) {
+            setChatModal({
+                isOpen: true,
+                task: task,
+                history: [],
+                loading: false
+            });
+        }
+    };
+
+    const handleChatSend = async (message) => {
+        const newHistory = [...chatModal.history, { role: 'user', content: message }];
+        setChatModal(prev => ({ ...prev, history: newHistory, loading: true }));
+
+        const response = await aiService.chatHelp(
+            chatModal.task.description,
+            newHistory,
+            { userName, streak, stats: getStats() }
+        );
+
+        if (!response.error) {
+            setChatModal(prev => ({
+                ...prev,
+                history: [...newHistory, {
+                    role: 'ai',
+                    content: response.message,
+                    suggestedTasks: response.suggestedTasks // Store suggestions
+                }],
+                loading: false
+            }));
+
+            // Remove the auto-action logic
+        } else {
+            setChatModal(prev => ({
+                ...prev,
+                loading: false,
+                history: [...newHistory, { role: 'ai', content: "Sorry, I'm having trouble connecting. Please try again." }]
+            }));
+        }
+    };
+
     const handleEdit = (id) => {
         const task = tasks.find(t => t.id === id);
-        const newDesc = prompt("Update task:", task.description);
-        if (newDesc && newDesc.trim()) {
-            updateTask(id, { description: newDesc });
+        if (task) {
+            setEditModal({
+                isOpen: true,
+                taskId: id,
+                currentDescription: task.description
+            });
         }
+    };
+
+    const handleSaveEdit = (newDescription) => {
+        if (editModal.taskId) {
+            updateTask(editModal.taskId, { description: newDescription });
+        }
+        setEditModal({ isOpen: false, taskId: null, currentDescription: "" });
     };
 
     const handleMove = async (id) => {
@@ -150,7 +230,8 @@ export function Dashboard() {
             const intervention = await aiService.getStuckIntervention(
                 task.description,
                 3, // Mock days stuck
-                newCount
+                newCount,
+                { userName, streak, stats: getStats() }
             );
 
             if (!intervention.error) {
@@ -177,23 +258,27 @@ export function Dashboard() {
         setAiModal({ ...aiModal, isOpen: false });
     };
 
-    const currentFocusTask = sortedTasks[0]; // Top task is the focus
+    const handleFocusTask = (taskId) => {
+        setFocusTaskId(taskId);
+    };
+
+    const currentFocusTask = focusTaskId ? tasks.find(t => t.id === focusTaskId) : null;
 
     if (loading) {
         return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-400">Loading...</div>;
     }
 
-    if (isFocusMode && currentFocusTask) {
+    if (currentFocusTask) {
         return (
             <FocusMode
                 task={currentFocusTask}
                 onComplete={() => completeTask(currentFocusTask.id)}
-                onExit={() => setIsFocusMode(false)}
+                onExit={() => setFocusTaskId(null)}
             />
         );
     }
 
-    const TaskList = ({ tasks, title, emptyMsg, showDate, isSortable }) => (
+    const TaskList = ({ tasks, title, emptyMsg, showDate, isSortable, onStartTimer }) => (
         <div className="mb-8 last:mb-0">
             {title && (
                 <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3 px-1">{title}</h3>
@@ -209,6 +294,10 @@ export function Dashboard() {
                         onDelete={deleteTask}
                         onEdit={handleEdit}
                         onMove={handleMove}
+                        onChat={handleChatOpen}
+                        onToggleTimer={toggleTimer}
+                        onStartTimer={onStartTimer}
+                        onFocusTask={handleFocusTask} // Fix Bug 29
                         showDate={showDate}
                         showDragHandle={isSortable && !task.pinned && !task.completed}
                     />
@@ -222,23 +311,41 @@ export function Dashboard() {
         </div>
     );
 
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Good morning";
+        if (hour < 18) return "Good afternoon";
+        return "Good evening";
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50/50 p-8 font-sans text-slate-900 transition-colors duration-500 overflow-y-auto">
             <div className="max-w-2xl mx-auto pb-20">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-12">
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Todone</h1>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Todone</h1>
+                    </div>
                     <div className="flex items-center gap-4">
                         {tasks.some(t => !t.completed) && (
                             <button
-                                onClick={() => setIsFocusMode(true)}
+                                onClick={() => setFocusTaskId(sortedTasks[0]?.id)}
                                 className="flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white rounded-lg shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all font-medium text-sm"
                             >
                                 <Radio className="w-4 h-4" />
                                 Focus Mode
                             </button>
                         )}
-                        <StreakCounter streak={12} /> {/* Placeholder streak */}
+                        <button onClick={() => setIsStatsOpen(true)} className="hover:scale-105 transition-transform">
+                            <StreakCounter streak={streak} />
+                        </button>
+                        <button
+                            onClick={() => setIsCalendarOpen(true)}
+                            className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="View History"
+                        >
+                            <Calendar className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
 
@@ -261,6 +368,7 @@ export function Dashboard() {
                                 title="Today"
                                 emptyMsg={tomorrowTasks.length === 0 && laterTasks.length === 0 ? "No tasks yet. You're free!" : "No tasks for today."}
                                 isSortable={true}
+                                onStartTimer={startTimer}
                             />
                         </SortableContext>
                     </DndContext>
@@ -276,7 +384,7 @@ export function Dashboard() {
                             </button>
                         </div>
                     )}
-                    {showAll && todayTasks.length > 5 && (
+                    {showAll && (todayTasks.length > 5 || tomorrowTasks.length > 5 || laterTasks.length > 5) && (
                         <div className="mt-4 mb-8 text-center">
                             <button
                                 onClick={() => setShowAll(false)}
@@ -287,12 +395,12 @@ export function Dashboard() {
                         </div>
                     )}
 
-                    {tomorrowTasks.length > 0 && (
-                        <TaskList tasks={tomorrowTasks} title="Tomorrow" showDate />
+                    {visibleTomorrowTasks.length > 0 && (
+                        <TaskList tasks={visibleTomorrowTasks} title="Tomorrow" showDate onStartTimer={startTimer} />
                     )}
 
-                    {laterTasks.length > 0 && (
-                        <TaskList tasks={laterTasks} title="Later" showDate />
+                    {visibleLaterTasks.length > 0 && (
+                        <TaskList tasks={visibleLaterTasks} title="Later" showDate onStartTimer={startTimer} />
                     )}
                 </div>
             </div>
@@ -327,10 +435,45 @@ export function Dashboard() {
                     intervention={aiModal.data.intervention}
                     onAction={() => {
                         // Start a timer? For now just close, user can use focus mode
-                        setIsFocusMode(true);
+                        setFocusTaskId(aiModal.data.task.id);
                     }}
                 />
             )}
+
+            <EditTaskModal
+                isOpen={editModal.isOpen}
+                onClose={() => setEditModal({ ...editModal, isOpen: false })}
+                initialTask={editModal.currentDescription}
+                onSave={handleSaveEdit}
+            />
+
+            <CalendarView
+                isOpen={isCalendarOpen}
+                onClose={() => setIsCalendarOpen(false)}
+                tasks={tasks}
+            />
+
+            <OnboardingModal
+                isOpen={!loading && !userName}
+                onSave={setUserName}
+            />
+
+            <AccomplishmentsModal
+                isOpen={isStatsOpen}
+                onClose={() => setIsStatsOpen(false)}
+                stats={getStats()}
+                streak={streak}
+            />
+
+            <ChatModal
+                isOpen={chatModal.isOpen}
+                onClose={() => setChatModal(prev => ({ ...prev, isOpen: false }))}
+                task={chatModal.task}
+                history={chatModal.history}
+                loading={chatModal.loading}
+                onSend={handleChatSend}
+                onAddTask={addTask} // Pass addTask function
+            />
         </div>
     );
 }

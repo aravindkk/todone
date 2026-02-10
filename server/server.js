@@ -28,14 +28,14 @@ Guidelines:
 - Each subtask must be completable in under 1 hour`;
 
 function getModel() {
-    // Use gemini-2.5-flash as it is the most robust current model
+    // Use gemini-2.0-flash-lite as it is the most robust current model
     // Note: systemInstruction is passed but if it fails we might need to prepend manually.
     // Let's try prepending manually to be safe against older SDKs/Models.
     return genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.0-flash-lite',
         generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 5000, // Increased to prevent truncation
+            maxOutputTokens: 200,
             responseMimeType: "application/json"
         },
     });
@@ -44,21 +44,24 @@ function getModel() {
 // Endpoint: Evaluate task
 app.post('/api/evaluate-task', async (req, res) => {
     try {
-        const { taskDescription } = req.body;
-        const model = getModel(); // Use standard config
+        const { taskDescription, userContext } = req.body;
+        const model = getModel();
+
+        let contextStr = "";
+        if (userContext) {
+            if (userContext.userName) contextStr += `User: ${userContext.userName}. `;
+            if (userContext.streak > 0) contextStr += `Streak: ${userContext.streak} days. `;
+            if (userContext.stats) {
+                contextStr += `completed ${userContext.stats.completed30Days} tasks in 30 days. `;
+            }
+        }
+
         // Prepend system instruction
-        const prompt = `${TODONE_SYSTEM_INSTRUCTION}\n\nEvaluate: "${taskDescription}"
-Is this task specific and achievable in <1 hour?
-Respond with JSON only:
-{
-  "isSpecific": boolean,
-  "canCompleteInOneHour": boolean,
-  "clarificationQuestion": "question if not specific",
-  "suggestion": [
-    {"description": "specific subtask 1", "estimatedMinutes": 30},
-    {"description": "specific subtask 2", "estimatedMinutes": 45}
-  ]
-}`;
+        const prompt = `Context: ${contextStr}
+Task: "${taskDescription}"
+Specific & <1hr? JSON:
+{ "isSpecific": bool, "canCompleteInOneHour": bool, "clarificationQuestion": "str?", "suggestion": [{"description": "str", "estimatedMinutes": int}] }
+If specific, suggestion=[]. If not, 2-3 suggestions.`;
 
         const result = await model.generateContent(prompt);
         const text = result.response.text();
@@ -89,21 +92,26 @@ Respond with JSON only:
 // Endpoint: Break down task
 app.post('/api/break-down-task', async (req, res) => {
     try {
-        const { taskDescription } = req.body;
+        const { taskDescription, userContext } = req.body;
         const model = getModel();
-        const prompt = `${TODONE_SYSTEM_INSTRUCTION}\n\nThe user has this task: "${taskDescription}"
 
-This task is too large. Break it down into 2-5 specific, actionable subtasks.
-Each subtask must:
-- Take less than 1 hour to complete
-- Have a clear, measurable outcome
+        let contextStr = "";
+        if (userContext) {
+            if (userContext.userName) contextStr += `User: ${userContext.userName}. `;
+            if (userContext.streak > 0) contextStr += `Streak: ${userContext.streak} days. `;
+            if (userContext.stats) {
+                contextStr += `completed ${userContext.stats.completed30Days} tasks in 30 days. `;
+            }
+        }
 
+        const prompt = `${contextStr}Task: "${taskDescription}"
+Break into 2-5 subtasks (JSON Array of strings). Keep it simple.
 Respond with JSON only:
 {
   "encouragement": "brief encouraging message",
   "subtasks": [
-    {"description": "specific subtask 1", "estimatedMinutes": 30},
-    {"description": "specific subtask 2", "estimatedMinutes": 45}
+    { "description": "specific subtask 1", "estimatedMinutes": 30 },
+    { "description": "specific subtask 2", "estimatedMinutes": 45 }
   ]
 }`;
 
@@ -132,21 +140,27 @@ Respond with JSON only:
 // Endpoint: Stuck task intervention
 app.post('/api/stuck-intervention', async (req, res) => {
     try {
-        const { taskDescription, daysStuck, timesMoved } = req.body;
+        const { taskDescription, daysStuck, timesMoved, userContext } = req.body;
         const model = getModel();
-        const prompt = `${TODONE_SYSTEM_INSTRUCTION}\n\nThe user is stuck on this task: "${taskDescription}"
-- Stuck for ${daysStuck} days
-- Moved/postponed ${timesMoved} times
 
-Provide ONE insightful, empathetic question to help them identify what's blocking them.
-Then suggest ONE specific action they could take right now.
+        let contextStr = "";
+        if (userContext) {
+            if (userContext.userName) contextStr += `User: ${userContext.userName}. `;
+            if (userContext.stats) {
+                const total = userContext.stats.totalCompleted;
+                if (total > 50) contextStr += `User is productive (completed ${total} tasks). `;
+                else contextStr += `User is new/struggling. `;
+            }
+        }
 
+        const prompt = `${contextStr}Task: "${taskDescription}" stuck for ${daysStuck} days, moved ${timesMoved} times.
+Briefly motivate user and suggest one micro-step to unblock.
 Respond with JSON only:
 {
-  "empathyStatement": "acknowledge their struggle briefly",
-  "diagnosticQuestion": "one question to identify the block",
-  "suggestedAction": "one concrete micro-action they could take now",
-  "recommendedHelper": "type of person who could help"
+    "empathyStatement": "acknowledge their struggle briefly",
+    "diagnosticQuestion": "one question to identify the block",
+    "suggestedAction": "one concrete micro-action they could take now",
+    "recommendedHelper": "type of person who could help (optional)"
 }`;
 
         const result = await model.generateContent(prompt);
@@ -171,7 +185,69 @@ Respond with JSON only:
     }
 });
 
+// Endpoint: Chat Help
+app.post('/api/chat-help', async (req, res) => {
+    try {
+        const { taskDescription, chatHistory, userContext } = req.body;
+        const model = getModel();
+
+        let contextStr = "";
+        if (userContext) {
+            if (userContext.userName) contextStr += `User Name: ${userContext.userName}. `;
+            if (userContext.streak) contextStr += `Streak: ${userContext.streak} days. `;
+            if (userContext.stats) {
+                contextStr += `Completed ${userContext.stats.completed30Days} tasks recently. `;
+            }
+        }
+
+        const historyStr = chatHistory.map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`).join('\n');
+
+        const prompt = `${TODONE_SYSTEM_INSTRUCTION}
+Context: ${contextStr}
+Task Interaction: The user is chatting about a task "${taskDescription}".
+
+Chat History:
+${historyStr}
+
+User: "${chatHistory[chatHistory.length - 1].content}"
+
+Instructions:
+1. Act as Todone AI (brief, helpful, encouraging).
+2. If the user asks to create tasks (e.g., "Add a task to buy milk", "Break this down"), return a list of specific, actionable tasks in suggestedTasks.
+3. Do NOT auto-create. Give the user the choice.
+
+Output JSON format:
+{
+  "message": "string",
+  "suggestedTasks": [ 
+      { "description": "Task 1", "estimatedMinutes": 15 },
+      { "description": "Task 2", "estimatedMinutes": 30 } 
+  ] // OPTIONAL, only if relevant
+}
+`;
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        console.log("Raw Chat Response:", text);
+
+        let jsonStr = text;
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+
+        try {
+            res.json(JSON.parse(jsonStr));
+        } catch (e) {
+            // Fallback for non-JSON response
+            res.json({ message: text });
+        }
+
+    } catch (error) {
+        console.error('Chat API Error:', error);
+        res.status(500).json({ error: 'Failed to generate chat response' });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Todone AI backend running on port ${PORT}`);
+    console.log(`Todone AI backend running on port ${PORT} `);
 });

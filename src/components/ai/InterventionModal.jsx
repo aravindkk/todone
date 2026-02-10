@@ -26,7 +26,7 @@ export function InterventionModal({ isOpen, onClose, task, intervention, onActio
                 <div className="bg-white p-6 rounded-2xl border border-orange-100 shadow-sm">
                     <p className="text-slate-500 text-sm font-medium uppercase tracking-wider mb-2">Suggested Micro-Action</p>
                     <p className="text-xl text-slate-800 font-medium leading-snug">
-                        "{intervention.suggestedAction}"
+                        {intervention.suggestedAction}
                     </p>
                 </div>
 

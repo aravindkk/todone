@@ -1,7 +1,17 @@
+import React from "react";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-export function Dialog({ isOpen, onClose, title, children, className }) {
+export function Dialog({ isOpen, onClose, title, children, className, bodyClassName, hideHeader }) {
+    React.useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     return (
@@ -14,22 +24,27 @@ export function Dialog({ isOpen, onClose, title, children, className }) {
 
             {/* Content */}
             <div className={cn(
-                "relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200",
+                "relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col",
                 className
             )}>
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 pb-2">
-                    {title && <h3 className="text-xl font-semibold text-slate-800">{title}</h3>}
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+                {!hideHeader && (title || onClose) && (
+                    <div className="flex items-center justify-between p-6 pb-2 shrink-0">
+                        {title && <h3 className="text-xl font-semibold text-slate-800">{title}</h3>}
+                        <button
+                            onClick={onClose}
+                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Body */}
-                <div className="p-6 pt-2">
+                <div className={cn(
+                    "p-6 pt-2 flex-1 min-h-0 flex flex-col",
+                    bodyClassName
+                )}>
                     {children}
                 </div>
             </div>
