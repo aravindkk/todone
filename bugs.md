@@ -1,0 +1,15 @@
+1. [Done] [P0] Clicking on complete task is making the item disappear instantly. The item should just be grayed out with the green tick on. Completing a task is an accomplishment, it show continue showing in the view for the user to feel good during the day.
+2. [Done] When multiple tasks are selected from the suggested tasks, only the first one gets added to the todo list.
+3. [Done] [P0] Fix the fonts. They are all different and looks very poor. Pick professional fonts and make sure they are consistent.
+4. [P1] Latency of evaluate Task is too high. Users will drop off and uninstall the extension.
+5. [Done] [P0] Drag and drop to change position of todo items is not working
+6. [Done] [P0] Date of the todo and the sections for Today, Tomorow and see more is not showing up. 
+7. [Done] [P0] Clicking on Move to tomorrow is not actually visually moving the task out of today's view
+8. [P1] Update task flow shows a prompt on the browser, it should be similar to the suggested tasks view - within the webpage and in same consistent theme as suggested tasks.
+9. [P1] Add a start task button and end task button on the task list view. Helps to track time on each task. On the list view, you should show the minutes/hours spent on this task so far. If it crosses 2 hours, you can show prompts to help user. so on each task in the list view, show a timer view(to start the task), a 2 min timer icon, a 5 min timer icon and a 25 min timer icon.
+10. [P1] There is no way to see old tasks, we need a calendar view available at one click. This should show last 7 days tasks and a view of task completion rates for each day.
+11. [P1] Streak is hardcoded to 12 days. It should be computed for user, based on how many days the user has completed atleast 3 tasks.
+12. [P2] AI should be personalised for each user. It should have information of how many tasks they have planned together, how many they have complished, what is the daily completion rate for this user recently, what is the average number of tasks this user completes daily, their push to next date rate, what kind of tasks does this user do, what kind of tasks the user almost always completes, what kind of tasks the user struggles to complete. The AI should motivate, guide, and help the user complete the tasks.
+13. [P2] Focus mode should allow user to select 5, 10 or 25 mins
+14. [P2] Clicking on streak should show accomplishments page which has a github contribution by day kind of view and some interesting stats for the user: Tasks completed in last 30 days: XX, Tasks completion rate in last 30 days : YY% and taks you love doing with a sample list of tasks which you consistently finished quickly(<4 hours), and tasks you take your time with a sample list of tasks(>8 hours). 
+15. [P2] On first time loading of the app, it should ask for user name as "What should I call you?" and keep this name stored for using in future messages to the user.
