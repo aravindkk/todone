@@ -21,7 +21,7 @@ export function OnboardingModal({ isOpen, onSave }) {
                     <Sparkles className="w-8 h-8 fill-current" />
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to Todone!</h2>
+                <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to Todo!</h2>
                 <p className="text-slate-500 mb-8">
                     Your personal AI productivity companion.
                     <br />
@@ -43,7 +43,7 @@ export function OnboardingModal({ isOpen, onSave }) {
                         disabled={!name.trim()}
                         className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
                     >
-                        Let's Go
+                        Let's Go!
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </button>
                 </form>

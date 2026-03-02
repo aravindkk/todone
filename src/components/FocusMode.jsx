@@ -1,49 +1,170 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Check, ArrowLeft } from "lucide-react";
 import { cn } from "../lib/utils";
+import { analytics } from "../services/analytics";
 
-export function FocusMode({ task, onComplete, onExit }) {
-    const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes
-    const [isActive, setIsActive] = useState(false); // Fix Bug 25: Auto-start false
+export function FocusMode({ task, initialDuration, onComplete, onExit }) {
+    // If initialDuration is passed (e.g. 5 from intervention), use it, otherwise default to 25
+    const [timeLeft, setTimeLeft] = useState(initialDuration ? initialDuration * 60 : 25 * 60);
+    const [isActive, setIsActive] = useState(initialDuration ? true : false);
 
+    // Store the actually selected duration to pass to analytics (defaults to initial or 25)
+    const selectedDurationRef = useRef(initialDuration || 25);
+    // Worker reference to clean up
+    const workerRef = useRef(null);
+    // Store target end time
+    const targetTimeRef = useRef(null);
+
+    // Bug 42: Cleanly render URLs in the task title header
+    const renderDescription = (text) => {
+        if (!text) return null;
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = text.split(urlRegex);
+        return parts.map((part, i) => {
+            if (part.match(urlRegex)) {
+                return (
+                    <a
+                        key={i}
+                        href={part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-600 underline underline-offset-2 break-all font-semibold"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        link
+                    </a>
+                );
+            }
+            return part;
+        });
+    };
+
+    // Effect for handling the timer tick via Web Worker (Fix Bug 40)
     useEffect(() => {
-        let interval = null;
+        if (!isActive || timeLeft <= 0) {
+            if (workerRef.current) {
+                workerRef.current.terminate();
+                workerRef.current = null;
+            }
+            return;
+        }
+
+        // Calculate target end time using Date.now() when activating
+        if (!targetTimeRef.current) {
+            targetTimeRef.current = Date.now() + (timeLeft * 1000);
+        }
+
+        // Create an inline Web Worker. This guarantees ticks even when the Chrome tab is backgrounded.
+        const workerCode = `
+            let interval;
+            self.onmessage = function(e) {
+                if (e.data === 'start') {
+                    interval = setInterval(() => self.postMessage('tick'), 500);
+                } else if (e.data === 'stop') {
+                    clearInterval(interval);
+                }
+            };
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+        workerRef.current = worker;
+
+        worker.onmessage = () => {
+            if (!targetTimeRef.current) return;
+            const remaining = Math.max(0, Math.ceil((targetTimeRef.current - Date.now()) / 1000));
+            setTimeLeft(remaining);
+
+            if (remaining <= 0) {
+                setIsActive(false);
+                worker.terminate();
+                workerRef.current = null;
+            }
+        };
+
+        worker.postMessage('start');
+
+        return () => {
+            worker.terminate();
+            workerRef.current = null;
+        };
+    }, [isActive]); // Only re-run if active state changes, not every tick
+
+    // Effect for handling Completion/Alarm sequence
+    useEffect(() => {
         let titleInterval = null;
 
-        if (isActive && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft(timeLeft => timeLeft - 1);
-            }, 1000);
-        } else if (timeLeft === 0) {
-            setIsActive(false);
+        if (!isActive && timeLeft === 0 && targetTimeRef.current) {
+            // Timer just legitimately hit 0 (targetTimeRef ensures it wasn't just initialized to 0)
+            targetTimeRef.current = null; // Consume the completion
 
-            // Fix Bug 30: Flashing Title
-            let flashState = false;
+            // Track completion
+            analytics.trackFocusSessionFinished(selectedDurationRef.current);
+
+            // Fix Bug 30: Scrolling Title
+            const alertText = " ⏰ TIMER DONE!  ⏰  TIME TO TAKE A BREAK!  ";
+            let offset = 0;
             titleInterval = setInterval(() => {
-                document.title = flashState ? "🔴 TIME'S UP!" : "⏰ Timer Done!";
-                flashState = !flashState;
-            }, 1000);
+                document.title = alertText.substring(offset) + alertText.substring(0, offset);
+                offset = (offset + 1) % alertText.length;
+            }, 250);
 
-            // Fix Bug 30: Robust Audio (Data URI)
-            // Using a slightly longer, more distinct beep sequence for better attention
-            const beep = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU";
-            const audio = new Audio(beep);
-            audio.loop = true;
+            // Fix Bug 30: Robust Audio (Web Audio API instead of data URI)
+            // This avoids 'NotSupportedError' entirely
+            let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let isAlarming = true;
 
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    console.error("Audio play failed:", error);
-                    // Fallback visual only if audio fails
-                });
-            }
+            const playBeep = () => {
+                if (!isAlarming || !audioCtx) return;
+
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.2);
+
+                // Play twice in quick succession then pause
+                setTimeout(() => {
+                    if (!isAlarming || !audioCtx) return;
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
+                    gain2.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gain2.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+                    gain2.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+                    osc2.start(audioCtx.currentTime);
+                    osc2.stop(audioCtx.currentTime + 0.2);
+                }, 300);
+
+                if (isAlarming) {
+                    setTimeout(playBeep, 1500); // Repeat every 1.5s
+                }
+            };
+
+            // Start the beep sequence
+            playBeep();
 
             // Cleanup function for stopping alarm
             const stopAlarm = () => {
-                audio.pause();
-                audio.currentTime = 0;
+                isAlarming = false;
+                if (audioCtx) {
+                    audioCtx.close();
+                    audioCtx = null;
+                }
                 if (titleInterval) clearInterval(titleInterval);
-                document.title = "Todone";
+                document.title = "Todo";
                 window.removeEventListener('click', stopAlarm);
                 window.removeEventListener('keydown', stopAlarm); // Also stop on key press
             };
@@ -54,14 +175,12 @@ export function FocusMode({ task, onComplete, onExit }) {
             // Cleanup on unmount if component is removed while alarming
             return () => {
                 stopAlarm();
-                if (interval) clearInterval(interval);
             };
         }
 
         return () => {
-            if (interval) clearInterval(interval);
             if (titleInterval) clearInterval(titleInterval);
-            document.title = "Todone";
+            document.title = "Todo";
         };
     }, [isActive, timeLeft]);
 
@@ -72,27 +191,31 @@ export function FocusMode({ task, onComplete, onExit }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-[#0f172a] text-white flex flex-col items-center justify-center p-8 z-50">
+        <div className="fixed inset-0 bg-[#0f172a] text-white flex flex-col items-center pt-24 pb-8 px-6 md:px-8 z-50 overflow-y-auto w-full h-full">
             <button
                 onClick={onExit}
-                className="absolute top-8 left-8 text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+                className="fixed top-8 left-6 md:left-8 text-slate-400 hover:text-white transition-colors flex items-center gap-2 z-50 bg-[#0f172a]/80 py-2 px-4 rounded-full backdrop-blur-sm"
             >
                 <ArrowLeft className="w-5 h-5" />
-                Back to Dashboard
+                Back
             </button>
 
-            <h2 className="text-4xl font-bold mb-12 leading-tight">
-                {task.description}
-            </h2>
+            <div className="w-full max-w-3xl mx-auto text-center mt-auto mb-8 sm:mb-12 shrink-0">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-100 leading-tight break-words">
+                    {renderDescription(task.description)}
+                </h2>
+            </div>
 
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-6 shrink-0 mb-auto">
                 {/* Bug 25: Duration selection above/prominent */}
                 <div className="flex items-center gap-3 mb-8">
                     {[5, 10, 25].map(min => (
                         <button
                             key={min}
                             onClick={() => {
+                                targetTimeRef.current = null; // Reset target end time on new selection
                                 setTimeLeft(min * 60);
+                                selectedDurationRef.current = min;
                                 setIsActive(true);
                             }}
                             className={cn(
@@ -115,7 +238,21 @@ export function FocusMode({ task, onComplete, onExit }) {
                 </div>
 
                 <button
-                    onClick={() => setIsActive(!isActive)}
+                    onClick={() => {
+                        if (isActive) {
+                            // Pausing: recalculate exactly how much time is left and clear target
+                            if (targetTimeRef.current) {
+                                const remaining = Math.max(0, Math.ceil((targetTimeRef.current - Date.now()) / 1000));
+                                setTimeLeft(remaining);
+                            }
+                            targetTimeRef.current = null;
+                            setIsActive(false);
+                        } else {
+                            // Starting/Resuming: establish a new target time
+                            targetTimeRef.current = Date.now() + (timeLeft * 1000);
+                            setIsActive(true);
+                        }
+                    }}
                     className={cn(
                         "mb-12 px-8 py-3 rounded-full font-medium text-lg transition-all flex items-center gap-2 mx-auto",
                         isActive

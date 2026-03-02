@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Dialog } from "./ui/Dialog";
-import { Trophy, Flame, Timer, CheckCircle2, TrendingUp } from "lucide-react";
+import { Trophy, Flame, Timer, CheckCircle2, TrendingUp, BarChart3, Loader2 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { aiService } from "../services/ai";
 
-export function AccomplishmentsModal({ isOpen, onClose, stats, streak }) {
+export function AccomplishmentsModal({ isOpen, onClose, stats, streak, userName }) {
     if (!isOpen) return null;
 
     // Generate last 365 days for heatmap
@@ -28,6 +30,33 @@ export function AccomplishmentsModal({ isOpen, onClose, stats, streak }) {
         if (count <= 5) return "bg-green-400";
         return "bg-green-600";
     };
+
+    // AI Insight state
+    const [insight, setInsight] = useState(null);
+    const [loadingInsight, setLoadingInsight] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen || !stats.hourlyData) return;
+
+        let isMounted = true;
+        const fetchInsight = async () => {
+            setLoadingInsight(true);
+            const res = await aiService.getActivityInsights(stats.hourlyData, { userName });
+            if (isMounted) {
+                if (!res.error && res.insight) {
+                    setInsight(res.insight);
+                } else {
+                    setInsight("Keep tracking tasks at your own pace!");
+                }
+                setLoadingInsight(false);
+            }
+        };
+        fetchInsight();
+        return () => { isMounted = false; };
+    }, [isOpen, stats.hourlyData]);
+
+    const maxActivity = stats.hourlyData ? Math.max(...stats.hourlyData.map(d => Math.max(d.created, d.completed))) : 0;
+    const chartMax = Math.max(maxActivity, 5);
 
     return (
         <Dialog
@@ -93,6 +122,74 @@ export function AccomplishmentsModal({ isOpen, onClose, stats, streak }) {
                         <span>More</span>
                     </div>
                 </div>
+
+                {/* Local Time Activity Chart (Feature 10) */}
+                {stats.hourlyData && (
+                    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                                <BarChart3 className="w-5 h-5 text-blue-500" />
+                                Daily Rhythm (Last 7 Days)
+                            </h4>
+                        </div>
+
+                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 mb-6">
+                            {loadingInsight ? (
+                                <div className="flex items-center gap-2 text-slate-500 text-sm">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Analyzing your best hours...
+                                </div>
+                            ) : (
+                                <p className="text-slate-700 italic font-medium">✨ "{insight}"</p>
+                            )}
+                        </div>
+
+                        <div className="flex items-end h-40 gap-1 pb-4 border-b border-slate-100 overflow-x-auto min-w-max">
+                            {stats.hourlyData.map((data, i) => {
+                                const createdPct = `${(data.created / chartMax) * 100}%`;
+                                const compPct = `${(data.completed / chartMax) * 100}%`;
+                                const isBusy = data.created > 0 || data.completed > 0;
+
+                                return (
+                                    <div key={i} className="flex-1 flex flex-col items-center group relative min-w-[20px]">
+                                        <div className="w-full h-full flex items-end justify-center px-0.5 relative">
+                                            {/* Created */}
+                                            <div
+                                                className="w-1/2 bg-slate-200 rounded-t-sm transition-all"
+                                                style={{ height: createdPct, minHeight: data.created > 0 ? '4px' : '0' }}
+                                            />
+                                            {/* Completed */}
+                                            <div
+                                                className="w-1/2 bg-blue-400 rounded-t-sm transition-all absolute bottom-0 left-1/2"
+                                                style={{ height: compPct, minHeight: data.completed > 0 ? '4px' : '0' }}
+                                            />
+                                            {/* Tooltip */}
+                                            {isBusy && (
+                                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] whitespace-nowrap px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none text-center">
+                                                    <div>{i % 12 || 12}{i < 12 ? 'am' : 'pm'}</div>
+                                                    <div className="text-slate-300">{data.created} Cr / {data.completed} Co</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-[9px] text-slate-400 mt-2 rotate-45 origin-left">
+                                            {i % 4 === 0 ? `${i}h` : ''}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="flex justify-center gap-6 mt-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-slate-200"></div>
+                                <span className="text-xs text-slate-500 font-medium">Tasks Added</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+                                <span className="text-xs text-slate-500 font-medium">Tasks Finished</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Insights */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

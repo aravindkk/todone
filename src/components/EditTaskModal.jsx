@@ -2,17 +2,31 @@ import { useState, useEffect } from "react";
 import { Edit2 } from "lucide-react";
 import { Dialog } from "./ui/Dialog";
 
-export function EditTaskModal({ isOpen, onClose, initialTask, onSave }) {
+export function EditTaskModal({ isOpen, onClose, initialTask, initialDate, initialNotes, onSave }) {
     const [value, setValue] = useState(initialTask || "");
+    const [dateValue, setDateValue] = useState("");
+    const [notesValue, setNotesValue] = useState("");
+
+    // Helper to extract YYYY-MM-DD from ISO string
+    const formatDateForInput = (isoString) => {
+        if (!isoString) return "";
+        return new Date(isoString).toISOString().split('T')[0];
+    };
 
     useEffect(() => {
         setValue(initialTask || "");
-    }, [initialTask]);
+        setDateValue(formatDateForInput(initialDate) || formatDateForInput(new Date().toISOString()));
+        setNotesValue(initialNotes || "");
+    }, [initialTask, initialDate, initialNotes]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (value.trim()) {
-            onSave(value);
+            // Convert back to ISO String for consistency
+            const newDate = new Date(dateValue);
+            // Default to start of day
+            newDate.setHours(0, 0, 0, 0);
+            onSave(value, newDate.toISOString(), notesValue);
             onClose();
         }
     };
@@ -46,6 +60,28 @@ export function EditTaskModal({ isOpen, onClose, initialTask, onSave }) {
                             onChange={(e) => setValue(e.target.value)}
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-slate-800"
                             autoFocus
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Scheduled Date
+                        </label>
+                        <input
+                            type="date"
+                            value={dateValue}
+                            onChange={(e) => setDateValue(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-slate-800"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Notes & Context (Who helped you?)
+                        </label>
+                        <textarea
+                            value={notesValue}
+                            onChange={(e) => setNotesValue(e.target.value)}
+                            placeholder="Add reference notes, links, or mention who can help with this task..."
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-slate-800 min-h-[100px] resize-y"
                         />
                     </div>
 

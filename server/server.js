@@ -17,6 +17,33 @@ app.use(express.json());
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use(limiter);
 
+// Feature 1: Limit AI API calls to 50 per user per day
+const userDailyUsage = new Map(); // { userId: { count: number, date: string } }
+
+function checkDailyLimit(req, res, next) {
+    const userId = req.body?.userContext?.userName || req.ip;
+    const today = new Date().toISOString().split('T')[0];
+
+    const usage = userDailyUsage.get(userId) || { count: 0, date: today };
+
+    // Reset if it's a new day
+    if (usage.date !== today) {
+        usage.count = 0;
+        usage.date = today;
+    }
+
+    if (usage.count >= 50) {
+        return res.status(429).json({
+            error: 'You have reached the limit for AI assistance for the day. This will reset tomorrow.'
+        });
+    }
+
+    // Increment and next
+    usage.count++;
+    userDailyUsage.set(userId, usage);
+    next();
+}
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const TODONE_SYSTEM_INSTRUCTION = `You are Todone AI, a supportive productivity coach.
@@ -42,9 +69,9 @@ function getModel() {
 }
 
 // Endpoint: Evaluate task
-app.post('/api/evaluate-task', async (req, res) => {
+app.post('/api/evaluate-task', checkDailyLimit, async (req, res) => {
     try {
-        const { taskDescription, userContext } = req.body;
+        const { taskDescription, userContext, taskNotes } = req.body;
         const model = getModel();
 
         let contextStr = "";
@@ -56,8 +83,11 @@ app.post('/api/evaluate-task', async (req, res) => {
             }
         }
 
+        let notesStr = "";
+        if (taskNotes) notesStr += `User's contextual notes (past help/resources): ${taskNotes}. `;
+
         // Prepend system instruction
-        const prompt = `Context: ${contextStr}
+        const prompt = `Context: ${contextStr}${notesStr}
 Task: "${taskDescription}"
 Specific & <1hr? JSON:
 { "isSpecific": bool, "canCompleteInOneHour": bool, "clarificationQuestion": "str?", "suggestion": [{"description": "str", "estimatedMinutes": int}] }
@@ -90,7 +120,7 @@ If specific, suggestion=[]. If not, 2-3 suggestions.`;
 });
 
 // Endpoint: Break down task
-app.post('/api/break-down-task', async (req, res) => {
+app.post('/api/break-down-task', checkDailyLimit, async (req, res) => {
     try {
         const { taskDescription, userContext } = req.body;
         const model = getModel();
@@ -138,7 +168,7 @@ Respond with JSON only:
 });
 
 // Endpoint: Stuck task intervention
-app.post('/api/stuck-intervention', async (req, res) => {
+app.post('/api/stuck-intervention', checkDailyLimit, async (req, res) => {
     try {
         const { taskDescription, daysStuck, timesMoved, userContext } = req.body;
         const model = getModel();
@@ -154,13 +184,14 @@ app.post('/api/stuck-intervention', async (req, res) => {
         }
 
         const prompt = `${contextStr}Task: "${taskDescription}" stuck for ${daysStuck} days, moved ${timesMoved} times.
-Briefly motivate user and suggest one micro-step to unblock.
+Briefly motivate user and suggest 1-2 micro-steps to unblock.
 Respond with JSON only:
 {
     "empathyStatement": "acknowledge their struggle briefly",
-    "diagnosticQuestion": "one question to identify the block",
-    "suggestedAction": "one concrete micro-action they could take now",
-    "recommendedHelper": "type of person who could help (optional)"
+    "suggestedTasks": [ 
+        { "description": "micro action 1", "estimatedMinutes": 2 },
+        { "description": "micro action 2", "estimatedMinutes": 5 } 
+    ]
 }`;
 
         const result = await model.generateContent(prompt);
@@ -186,9 +217,9 @@ Respond with JSON only:
 });
 
 // Endpoint: Chat Help
-app.post('/api/chat-help', async (req, res) => {
+app.post('/api/chat-help', checkDailyLimit, async (req, res) => {
     try {
-        const { taskDescription, chatHistory, userContext } = req.body;
+        const { taskDescription, chatHistory, userContext, taskNotes } = req.body;
         const model = getModel();
 
         let contextStr = "";
@@ -200,14 +231,18 @@ app.post('/api/chat-help', async (req, res) => {
             }
         }
 
-        const historyStr = chatHistory.map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`).join('\n');
+        let notesStr = "";
+        if (taskNotes) notesStr += `User's contextual notes for this task (past help/resources): ${taskNotes}. `;
+
+        const historyText = chatHistory.map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`).join('\n');
 
         const prompt = `${TODONE_SYSTEM_INSTRUCTION}
-Context: ${contextStr}
-Task Interaction: The user is chatting about a task "${taskDescription}".
+Context: ${contextStr}${notesStr}
+You are an expert productivity coach helping the user with this specific task: "${taskDescription}".
+They are asking for help or advice.
 
-Chat History:
-${historyStr}
+Previous conversation about this task:
+${historyText}
 
 User: "${chatHistory[chatHistory.length - 1].content}"
 
@@ -247,7 +282,95 @@ Output JSON format:
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Todone AI backend running on port ${PORT} `);
+// Endpoint: Weekly History Recap
+app.post('/api/history-recap', checkDailyLimit, async (req, res) => {
+    try {
+        const { stats, userContext } = req.body;
+        const model = getModel();
+
+        let contextStr = "";
+        if (userContext?.userName) contextStr += `User: ${userContext.userName}. `;
+
+        // stats is expected to be an array of { date, created, completed }
+        const statsStr = JSON.stringify(stats);
+
+        const prompt = `${contextStr}
+Here are my task stats for the last 7 days: ${statsStr}.
+Provide a single-sentence, warm, and highly encouraging recap of my week. Focus on the positive.
+Respond with JSON only:
+{ "recap": "string" }`;
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        console.log("Raw History Recap Response:", text);
+
+        let jsonStr = text;
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+
+        try {
+            res.json(JSON.parse(jsonStr));
+        } catch (e) {
+            res.json({ recap: text });
+        }
+    } catch (error) {
+        console.error('History Recap Error:', error);
+        res.status(500).json({ error: 'Failed to generate history recap' });
+    }
 });
+
+// Endpoint: Activity Insights
+app.post('/api/activity-insights', checkDailyLimit, async (req, res) => {
+    try {
+        const { hourlyData, userContext } = req.body;
+        const model = getModel();
+
+        const prompt = `${TODONE_SYSTEM_INSTRUCTION}
+Context: User local time distribution of task creations and completions over the last 7 days.
+Data: ${JSON.stringify(hourlyData)}
+
+Provide 1-2 short, encouraging sentences of insight about when the user is most productive or active based on this local time data. Keep it conversational.`;
+
+        const result = await model.generateContent(prompt);
+        res.json({ insight: result.response.text(), success: true });
+    } catch (error) {
+        console.error("Activity Insights Error:", error);
+        res.status(500).json({ error: "Failed to generate insights." });
+    }
+});
+
+app.post('/api/daily-recap', checkDailyLimit, async (req, res) => {
+    try {
+        const { tasks, previousDayName, userName } = req.body;
+        const model = getModel();
+
+        let prompt = `${TODONE_SYSTEM_INSTRUCTION}
+Context: The user (${userName || 'User'}) is opening the app for the first time today.
+Task Data from the previous weekday (${previousDayName}):
+`;
+
+        if (tasks.length === 0) {
+            prompt += `No tasks were completed or created.
+Generate a warm, encouraging 1-2 sentence greeting hoping they have a fresh and productive day today. Do not mention the lack of tasks negatively.`;
+        } else {
+            prompt += `${JSON.stringify(tasks.map(t => ({ desc: t.description, completed: t.completed })))}
+Generate a warm, encouraging 1-2 sentence summary of what they accomplished on ${previousDayName}. Keep it brief, uplifting, and ready them for today.`;
+        }
+
+        const result = await model.generateContent(prompt);
+        res.json({ recap: result.response.text(), success: true });
+    } catch (error) {
+        console.error("Daily Recap Error:", error);
+        res.status(500).json({ error: "Failed to generate recap." });
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Todone AI backend running on port ${PORT} `);
+    });
+}
+
+// Export the Express API
+export default app;

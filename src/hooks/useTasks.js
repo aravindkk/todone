@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { storage } from "../lib/storage";
+import { analytics } from "../services/analytics";
 
-const TASKS_KEY = "todone_tasks";
-const USER_NAME_KEY = "todone_user_name";
+const TASKS_KEY = "todo_tasks";
+const USER_NAME_KEY = "todo_user_name";
 
 export function useTasks() {
     const [tasks, setTasks] = useState([]);
     const [userName, setUserName] = useState(null);
+    const [installDate, setInstallDate] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const calculateStreak = (currentTasks) => {
@@ -56,8 +58,24 @@ export function useTasks() {
     const loadTasks = async () => {
         const loadedTasks = await storage.get(TASKS_KEY, []);
         const loadedName = await storage.get(USER_NAME_KEY, null);
+
+        let iDate = await storage.get('todo_install_date', null);
+        if (!iDate) {
+            iDate = new Date().toISOString();
+            await storage.set('todo_install_date', iDate);
+            analytics.trackNewInstall();
+        }
+
+        const lastActiveDate = await storage.get('todo_last_active_date', null);
+        const todayStr = new Date().toLocaleDateString();
+        if (lastActiveDate !== todayStr) {
+            analytics.trackActiveDay();
+            await storage.set('todo_last_active_date', todayStr);
+        }
+
         setTasks(loadedTasks);
         setUserName(loadedName);
+        setInstallDate(iDate);
         setLoading(false);
     };
 
@@ -88,6 +106,7 @@ export function useTasks() {
             lastStartTime: null
         };
         saveTasks([newTask, ...tasks]);
+        analytics.trackTaskAdded(false);
     };
 
     const addMultipleTasks = (descriptions) => {
@@ -107,6 +126,7 @@ export function useTasks() {
             lastStartTime: null
         }));
         saveTasks([...newTasks, ...tasks]);
+        analytics.trackTasksAddedBatch(descriptions.length);
     };
 
     const reorderTasks = (newTasks) => {
@@ -114,9 +134,13 @@ export function useTasks() {
     };
 
     const completeTask = (id) => {
-        const newTasks = tasks.map(t =>
-            t.id === id ? { ...t, completed: !t.completed, completedAt: new Date().toISOString() } : t
-        );
+        const newTasks = tasks.map(t => {
+            if (t.id === id) {
+                if (!t.completed) analytics.trackTaskCompleted();
+                return { ...t, completed: !t.completed, completedAt: new Date().toISOString() };
+            }
+            return t;
+        });
         saveTasks(newTasks);
     };
 
@@ -130,6 +154,7 @@ export function useTasks() {
     const deleteTask = (id) => {
         const newTasks = tasks.filter(t => t.id !== id);
         saveTasks(newTasks);
+        analytics.trackItemDeleted();
     };
 
     const updateTask = (id, updates) => {
@@ -212,12 +237,34 @@ export function useTasks() {
             return duration > 360; // > 6 hours
         }).slice(0, 5);
 
+        // Hourly Activity (Last 7 days based on LOCAL TIME)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+
+        const hourlyData = Array.from({ length: 24 }, (_, i) => ({ hour: i, created: 0, completed: 0 }));
+
+        tasks.forEach(t => {
+            if (t.createdAt) {
+                const createdDate = new Date(t.createdAt);
+                if (createdDate >= sevenDaysAgo) {
+                    hourlyData[createdDate.getHours()].created++;
+                }
+            }
+            if (t.completed && t.completedAt) {
+                const compDate = new Date(t.completedAt);
+                if (compDate >= sevenDaysAgo) {
+                    hourlyData[compDate.getHours()].completed++;
+                }
+            }
+        });
+
         return {
             totalCompleted: completedTasks.length,
             completed30Days: completedInLast30Days.length,
             heatmap,
             quickTasks,
-            longTasks
+            longTasks,
+            hourlyData
         };
     };
 
@@ -236,6 +283,7 @@ export function useTasks() {
         streak,
         userName,
         setUserName: saveUserName,
+        installDate,
         getStats
     };
 }

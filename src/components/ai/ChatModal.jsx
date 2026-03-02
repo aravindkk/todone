@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog } from "../ui/Dialog";
-import { Send, Bot, User, Loader2, Check } from "lucide-react";
+import { Send, Bot, User, Loader2, Check, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onAddTask }) {
@@ -19,7 +19,34 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
     const handleSubmit = (e) => {
         e.preventDefault();
         if (input.trim() && !loading) {
-            onSend(input.trim());
+            const userMsg = input.trim().toLowerCase();
+
+            // Bug 27: Detect "add tasks" intent
+            const lastMessage = history[history.length - 1];
+            if (
+                lastMessage &&
+                lastMessage.role === 'assistant' &&
+                lastMessage.suggestedTasks &&
+                lastMessage.suggestedTasks.length > 0 &&
+                (userMsg.includes("add them") || userMsg.includes("add these") || userMsg.includes("add task") || userMsg.includes("create task"))
+            ) {
+                // Add all suggested tasks from the last message
+                lastMessage.suggestedTasks.forEach(t => {
+                    if (!addedTasks.has(t.description)) {
+                        onAddTask(t.description);
+                        setAddedTasks(prev => {
+                            const newSet = new Set(prev);
+                            newSet.add(t.description);
+                            return newSet;
+                        });
+                    }
+                });
+                // Send a confirmation message instead of standard API call
+                onSend(input.trim(), true); // We will need to modify Dashboard.jsx to handle this silent flag or just let it send
+            } else {
+                onSend(input.trim());
+            }
+
             setInput("");
         }
     };
@@ -35,26 +62,46 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
             hideHeader={true}
         >
             {/* Header */}
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                    <Bot className="w-5 h-5" />
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                        <Bot className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-800 truncate max-w-[280px]" title={task.description}>
+                            Help with: {task.description}
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                            Todo AI Assistant
+                        </p>
+                    </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-800 truncate">
-                        Help with: {task.description}
-                    </h3>
-                    <p className="text-xs text-slate-500">
-                        Todone AI Assistant
-                    </p>
-                </div>
+                <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-lg transition-colors shrink-0">
+                    <X className="w-5 h-5" />
+                </button>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30">
                 {history.length === 0 && (
-                    <div className="text-center py-10 text-slate-400">
+                    <div className="text-center py-6 text-slate-400 flex flex-col items-center">
                         <Bot className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                        <p>How can I help you with this task?</p>
+                        <p className="mb-6">How can I help you with this task?</p>
+                        <div className="flex flex-col gap-2 w-full max-w-sm">
+                            {[
+                                "Break this down into smaller steps",
+                                "How long should this take?",
+                                "Give me a quick tip to start"
+                            ].map(prompt => (
+                                <button
+                                    key={prompt}
+                                    onClick={() => onSend(prompt)}
+                                    className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm hover:bg-slate-50 hover:border-blue-200 transition-colors text-left"
+                                >
+                                    {prompt}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -92,7 +139,11 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
                                                 onClick={() => {
                                                     if (!isAdded) {
                                                         onAddTask(task.description);
-                                                        setAddedTasks(prev => new Set(prev).add(task.description));
+                                                        setAddedTasks(prev => {
+                                                            const newSet = new Set(prev);
+                                                            newSet.add(task.description);
+                                                            return newSet;
+                                                        });
                                                     }
                                                 }}
                                                 disabled={isAdded}
@@ -105,8 +156,8 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
                                             >
                                                 <span className="font-medium">{task.description}</span>
                                                 {isAdded ? (
-                                                    <span className="text-green-600 font-bold text-[10px] uppercase tracking-wider flex items-center gap-1">
-                                                        Added <Check className="w-3 h-3" />
+                                                    <span className="text-green-600 font-bold text-[10px] uppercase flex items-center gap-1">
+                                                        ADDED <Check className="w-3 h-3" />
                                                     </span>
                                                 ) : (
                                                     <span className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity font-bold">+ Add</span>

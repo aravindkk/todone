@@ -30,3 +30,24 @@ Audio play failed NotSupportedError: Failed to load because no supported source 
 29. [Open] Remove the 2 mins, 5 mins, 25 mins timer icons from the task list view. Just keep the play button and that should take user to the focus mode for the task, where user can select the timer duration.
 30. [Open] When the timer is done, the title just changes a bit. The title of the tab should be moving text so it catches the attention of the user among other tabs. The alarm ring failed on chrome with this error on console: 
 Audio play failed NotSupportedError: Failed to load because no supported source was found.
+31. [Done] [Verified] Edit task should allow edit of date for the todo
+32. [Done] [Verified] Show 2-3 relevant prompts for the chat box on how to ask help to AI - which user can click to start chat
+33. [Done] [Verified] Chat should have clear close/dismiss icon to close the chat
+34. [Done] [Verified] [Redo-1] Tasks moved multiple times should have suggested micro tasks which user can click and add to their task list.
+Comments: seeing the following error on chrome console when I click on Add buttonfor micro tasks:
+Uncaught TypeError: onAddTask is not a function
+    at onClick (InterventionModal.jsx:45:49)
+onClick	@	InterventionModal.jsx:45
+35. [Done] [Verified] Feeling stuck modal is too big in font and covering the whole screen
+Comments: The size of the modal is still too large and going out of view even at 80% browser zoom level. The whole modal should show up properly even at 100% zoom level.
+36. [Done] [Verified] [Redo-1] Feeling stuck shows 2 min timer button and leads to focus mode with no option to have 2 min timer, it should just start the 2 min timer
+37. [Done] [Verified] Feeling stuck modal show micro tasks like the one in chat and allow user to add them to the task list.
+38. [Done] [Verified] [Redo-1] Directly clicking on the Focus mode is not showing the task description but shows Complete Task below. Show th task description clearly on this screen.
+Comments: It's showing a pinned task even if it's moved to a later date. It should show task description of whichever task is at the top of today's list as of that time.
+39. [Done] [Verified] [Redo-1] Add a "Hide completed" button at the bottom of the Today section, which should hide completed items in all sections. Once this is clicked, it should show text as "Show completed" which when clicked should toggle the visibility of the completed items.
+Comments: Show/Hide completed and Show less/more buttons should be on the same line. 
+40. [Done] [Verified] [Redo-1] When I switch to another tab, the timer becomes slower or stops. The time should continue running at proper pace when I move to other tabs. This is the core functionality of the extension, should not be broken.
+Comments: Timer is still running slow if I move to another tab. I verified by starting a 5 min timer and on another tab opening google.com and starting a 5 min timer there. Even after the google.com one finished, the extension's timer showed 2 mins. This is critical as called out, how did you verify this fix? 
+41. [Done] [Verified] [Redo-1] Allow links in the task text during task creation, and updates. For example, review this doc with a link should show link as text and the href for it as the actual link address. 
+Comments: The link should be shown in text as "link". Right now the whole link is showing and it makes the view pretty poor. 
+42. [Done] [Verified] When a task has a link and it is opened in focus mode, the full link address is shown, it should continue to show only the word link.
