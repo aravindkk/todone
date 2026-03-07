@@ -11,12 +11,6 @@ export function MentorshipModal({ isOpen, onClose }) {
             className="bg-white/95 backdrop-blur-xl border border-white/20 max-w-sm"
         >
             <div className="flex flex-col items-center text-center gap-4">
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors"
-                >
-                    <X className="w-5 h-5" />
-                </button>
                 <div className="p-4 bg-purple-50 rounded-2xl text-purple-600 mb-2">
                     <Users className="w-10 h-10" />
                 </div>

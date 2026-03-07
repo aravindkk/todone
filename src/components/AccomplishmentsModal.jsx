@@ -4,14 +4,15 @@ import { Trophy, Flame, Timer, CheckCircle2, TrendingUp, BarChart3, Loader2 } fr
 import { cn } from "../lib/utils";
 import { aiService } from "../services/ai";
 
-export function AccomplishmentsModal({ isOpen, onClose, stats, streak, userName }) {
+export function AccomplishmentsModal({ isOpen, onClose, stats, streak, userName, hasRecentTasks = true }) {
     if (!isOpen) return null;
 
     // Generate last 365 days for heatmap
     const getHeatmapDays = () => {
         const days = [];
         const today = new Date();
-        for (let i = 364; i >= 0; i--) {
+        // Generate last 30 days for heatmap
+        for (let i = 29; i >= 0; i--) {
             const d = new Date(today);
             d.setDate(d.getDate() - i);
             days.push(d);
@@ -31,32 +32,7 @@ export function AccomplishmentsModal({ isOpen, onClose, stats, streak, userName 
         return "bg-green-600";
     };
 
-    // AI Insight state
-    const [insight, setInsight] = useState(null);
-    const [loadingInsight, setLoadingInsight] = useState(false);
-
-    useEffect(() => {
-        if (!isOpen || !stats.hourlyData) return;
-
-        let isMounted = true;
-        const fetchInsight = async () => {
-            setLoadingInsight(true);
-            const res = await aiService.getActivityInsights(stats.hourlyData, { userName });
-            if (isMounted) {
-                if (!res.error && res.insight) {
-                    setInsight(res.insight);
-                } else {
-                    setInsight("Keep tracking tasks at your own pace!");
-                }
-                setLoadingInsight(false);
-            }
-        };
-        fetchInsight();
-        return () => { isMounted = false; };
-    }, [isOpen, stats.hourlyData]);
-
-    const maxActivity = stats.hourlyData ? Math.max(...stats.hourlyData.map(d => Math.max(d.created, d.completed))) : 0;
-    const chartMax = Math.max(maxActivity, 5);
+    // Removed AI Insight state and Daily Rhythm chart logic
 
     return (
         <Dialog
@@ -66,169 +42,133 @@ export function AccomplishmentsModal({ isOpen, onClose, stats, streak, userName 
             hideHeader={true}
         >
             <div className="flex items-center gap-4 mb-8 shrink-0">
-                <div className="p-3 bg-orange-50 rounded-xl text-orange-500">
-                    <Trophy className="w-8 h-8" />
+                <div className={cn(
+                    "p-3 rounded-xl",
+                    streak?.isFrozen ? "bg-blue-50 text-blue-500" : "bg-orange-50 text-orange-500"
+                )}>
+                    {streak?.isFrozen ? <Snowflake className="w-8 h-8" /> : <Flame className="w-8 h-8" />}
                 </div>
                 <div>
-                    <h3 className="text-2xl font-bold text-slate-800">Your Journey</h3>
-                    <p className="text-slate-500">Consistency is key. Look how far you've come!</p>
+                    <h3 className="text-2xl font-bold text-slate-800">Streak: {streak?.count || 0} Days</h3>
+                    <p className="text-slate-500">
+                        {streak?.isFrozen ? "Streak frozen today. Relax!" : "Consistency is key. Look how far you've come!"}
+                    </p>
                 </div>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-2 space-y-10">
-                {/* Top Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-6 bg-orange-50 rounded-2xl border border-orange-100 flex flex-col items-center text-center">
-                        <Flame className="w-8 h-8 text-orange-500 mb-2" />
-                        <span className="text-3xl font-bold text-slate-800">{streak}</span>
-                        <span className="text-sm font-medium text-slate-500 uppercase tracking-wide">Current Streak</span>
-                    </div>
-                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 flex flex-col items-center text-center">
-                        <CheckCircle2 className="w-8 h-8 text-blue-500 mb-2" />
-                        <span className="text-3xl font-bold text-slate-800">{stats.completed30Days}</span>
-                        <span className="text-sm font-medium text-slate-500 uppercase tracking-wide">Tasks (30 Days)</span>
-                    </div>
-                    <div className="p-6 bg-purple-50 rounded-2xl border border-purple-100 flex flex-col items-center text-center">
-                        <TrendingUp className="w-8 h-8 text-purple-500 mb-2" />
-                        <span className="text-3xl font-bold text-slate-800">{stats.totalCompleted}</span>
-                        <span className="text-sm font-medium text-slate-500 uppercase tracking-wide">All Time</span>
-                    </div>
-                </div>
+                {/* Heatmap & Insights */}
+                <div className="space-y-6">
+                    {/* Heatmap */}
+                    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm relative overflow-hidden">
+                        <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2 relative z-20 bg-white/50 backdrop-blur-sm -mx-2 px-2 py-1 rounded-lg">
+                            <div className="w-1.5 h-4 bg-green-500 rounded-full" />
+                            Activity Log (Last 30 Days)
+                        </h4>
 
-                {/* Heatmap */}
-                <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-                    <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                        <div className="w-1.5 h-4 bg-green-500 rounded-full" />
-                        Activity Log (Last Year)
-                    </h4>
-                    <div className="flex flex-wrap gap-1">
-                        {heatmapDays.map((date, i) => (
-                            <div
-                                key={i}
-                                className={cn(
-                                    "w-3 h-3 rounded-sm transition-all hover:ring-2 hover:ring-slate-300",
-                                    getHeatmapColor(date)
-                                )}
-                                title={`${date.toDateString()}: ${stats.heatmap[date.toISOString().split('T')[0]] || 0} tasks`}
-                            />
-                        ))}
-                    </div>
-                    <div className="flex items-center gap-2 mt-4 text-xs text-slate-400 justify-end">
-                        <span>Less</span>
-                        <div className="w-3 h-3 bg-slate-100 rounded-sm" />
-                        <div className="w-3 h-3 bg-green-200 rounded-sm" />
-                        <div className="w-3 h-3 bg-green-400 rounded-sm" />
-                        <div className="w-3 h-3 bg-green-600 rounded-sm" />
-                        <span>More</span>
-                    </div>
-                </div>
-
-                {/* Local Time Activity Chart (Feature 10) */}
-                {stats.hourlyData && (
-                    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-                        <div className="flex items-center justify-between mb-6">
-                            <h4 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                                <BarChart3 className="w-5 h-5 text-blue-500" />
-                                Daily Rhythm (Last 7 Days)
-                            </h4>
+                        <div className={cn(
+                            "transition-all duration-500 relative z-0"
+                        )}>
+                            <div className="flex flex-wrap gap-1">
+                                {heatmapDays.map((date, i) => (
+                                    <div
+                                        key={i}
+                                        className={cn(
+                                            "w-3 h-3 rounded-sm transition-all",
+                                            hasRecentTasks && "hover:ring-2 hover:ring-slate-300",
+                                            getHeatmapColor(date)
+                                        )}
+                                        title={`${date.toDateString()}: ${stats.heatmap[date.toISOString().split('T')[0]] || 0} tasks`}
+                                    />
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-2 mt-4 text-xs text-slate-400 justify-end">
+                                <span>Less</span>
+                                <div className="w-3 h-3 bg-slate-100 rounded-sm" />
+                                <div className="w-3 h-3 bg-green-200 rounded-sm" />
+                                <div className="w-3 h-3 bg-green-400 rounded-sm" />
+                                <div className="w-3 h-3 bg-green-600 rounded-sm" />
+                                <span>More</span>
+                            </div>
                         </div>
 
-                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50 mb-6">
-                            {loadingInsight ? (
-                                <div className="flex items-center gap-2 text-slate-500 text-sm">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Analyzing your best hours...
+                        {/* Bug 61: Task Movement Stats */}
+                        <div className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6 relative z-20">
+                            <div>
+                                <h5 className="text-sm font-semibold text-slate-800 mb-1">Task Movement</h5>
+                                <p className="text-xs text-slate-500 mb-3">Tasks pushed to tomorrow</p>
+                                <div className="flex items-end gap-2">
+                                    <span className="text-3xl font-bold text-slate-800">{stats.percentMoved || 0}%</span>
+                                    <span className="text-sm text-slate-500 mb-1">of all tasks</span>
                                 </div>
-                            ) : (
-                                <p className="text-slate-700 italic font-medium">✨ "{insight}"</p>
-                            )}
-                        </div>
-
-                        <div className="flex items-end h-40 gap-1 pb-4 border-b border-slate-100 overflow-x-auto min-w-max">
-                            {stats.hourlyData.map((data, i) => {
-                                const createdPct = `${(data.created / chartMax) * 100}%`;
-                                const compPct = `${(data.completed / chartMax) * 100}%`;
-                                const isBusy = data.created > 0 || data.completed > 0;
-
-                                return (
-                                    <div key={i} className="flex-1 flex flex-col items-center group relative min-w-[20px]">
-                                        <div className="w-full h-full flex items-end justify-center px-0.5 relative">
-                                            {/* Created */}
-                                            <div
-                                                className="w-1/2 bg-slate-200 rounded-t-sm transition-all"
-                                                style={{ height: createdPct, minHeight: data.created > 0 ? '4px' : '0' }}
-                                            />
-                                            {/* Completed */}
-                                            <div
-                                                className="w-1/2 bg-blue-400 rounded-t-sm transition-all absolute bottom-0 left-1/2"
-                                                style={{ height: compPct, minHeight: data.completed > 0 ? '4px' : '0' }}
-                                            />
-                                            {/* Tooltip */}
-                                            {isBusy && (
-                                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] whitespace-nowrap px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none text-center">
-                                                    <div>{i % 12 || 12}{i < 12 ? 'am' : 'pm'}</div>
-                                                    <div className="text-slate-300">{data.created} Cr / {data.completed} Co</div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className="text-[9px] text-slate-400 mt-2 rotate-45 origin-left">
-                                            {i % 4 === 0 ? `${i}h` : ''}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        <div className="flex justify-center gap-6 mt-6">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-slate-200"></div>
-                                <span className="text-xs text-slate-500 font-medium">Tasks Added</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-blue-400"></div>
-                                <span className="text-xs text-slate-500 font-medium">Tasks Finished</span>
+                            <div>
+                                <h5 className="text-sm font-semibold text-slate-800 mb-2">Most Delayed Tasks</h5>
+                                {stats.topMovedTasks && stats.topMovedTasks.length > 0 ? (
+                                    <ul className="space-y-2">
+                                        {stats.topMovedTasks.map(t => (
+                                            <li key={t.id} className="flex justify-between items-center text-sm">
+                                                <span className="text-slate-600 truncate pr-2" title={t.description}>{t.description}</span>
+                                                <span className="text-xs font-medium bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full shrink-0">
+                                                    {t.moveCount}x
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-sm text-slate-400 italic">No delayed tasks.</p>
+                                )}
                             </div>
                         </div>
                     </div>
-                )}
 
-                {/* Insights */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-                        <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                            <Timer className="w-5 h-5 text-green-500" />
-                            Tasks you excel at (&lt; 15m)
-                        </h4>
-                        {stats.quickTasks.length > 0 ? (
-                            <div className="space-y-3">
-                                {stats.quickTasks.map(task => (
-                                    <div key={task.id} className="text-sm text-slate-600 flex items-start gap-2">
-                                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                                        <span>{task.description}</span>
+                    {/* Insights */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm relative overflow-hidden">
+                            <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2 relative z-20 bg-white/50 backdrop-blur-sm -mx-2 px-2 py-1 rounded-lg">
+                                <Timer className="w-5 h-5 text-green-500" />
+                                Tasks you excel at (&lt; 4h)
+                            </h4>
+                            <div className={cn(
+                                "transition-all duration-500 relative z-0"
+                            )}>
+                                {stats.quickTasks.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {stats.quickTasks.map(task => (
+                                            <div key={task.id} className="text-sm text-slate-600 flex items-start gap-2">
+                                                <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                                                <span>{task.description}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                ) : (
+                                    <p className="text-sm text-slate-400 italic">No tasks in this category yet.</p>
+                                )}
                             </div>
-                        ) : (
-                            <p className="text-sm text-slate-400 italic">No tasks in this category yet.</p>
-                        )}
-                    </div>
+                        </div>
 
-                    <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-                        <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                            <Timer className="w-5 h-5 text-orange-500" />
-                            Tasks which need attention (&gt; 6h)
-                        </h4>
-                        {stats.longTasks.length > 0 ? (
-                            <div className="space-y-3">
-                                {stats.longTasks.map(task => (
-                                    <div key={task.id} className="text-sm text-slate-600 flex items-start gap-2">
-                                        <CheckCircle2 className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
-                                        <span>{task.description}</span>
+                        <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm relative overflow-hidden">
+                            <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2 relative z-20 bg-white/50 backdrop-blur-sm -mx-2 px-2 py-1 rounded-lg">
+                                <Timer className="w-5 h-5 text-orange-500" />
+                                Tasks which need attention (&gt; 6h)
+                            </h4>
+                            <div className={cn(
+                                "transition-all duration-500 relative z-0"
+                            )}>
+                                {stats.longTasks.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {stats.longTasks.map(task => (
+                                            <div key={task.id} className="text-sm text-slate-600 flex items-start gap-2">
+                                                <CheckCircle2 className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
+                                                <span>{task.description}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                ) : (
+                                    <p className="text-sm text-slate-400 italic">No tasks in this category yet.</p>
+                                )}
                             </div>
-                        ) : (
-                            <p className="text-sm text-slate-400 italic">No tasks in this category yet.</p>
-                        )}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -258,15 +258,34 @@ export function useTasks() {
             }
         });
 
+        // Bug 61: Task Movement Stats
+        const tasksWithMoves = tasks.filter(t => t.moveCount > 0);
+        const percentMoved = tasks.length > 0 ? Math.round((tasksWithMoves.length / tasks.length) * 100) : 0;
+
+        const topMovedTasks = [...tasksWithMoves]
+            .sort((a, b) => b.moveCount - a.moveCount)
+            .slice(0, 3);
+
         return {
             totalCompleted: completedTasks.length,
             completed30Days: completedInLast30Days.length,
             heatmap,
             quickTasks,
             longTasks,
-            hourlyData
+            hourlyData,
+            percentMoved,
+            topMovedTasks
         };
     };
+
+    // Bug 51: Calculate if user has any tasks created in the last 7 days
+    const hasRecentTasks = tasks.some(t => {
+        if (!t.createdAt) return false;
+        const createdDate = new Date(t.createdAt);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        return createdDate >= sevenDaysAgo;
+    });
 
     return {
         tasks,
@@ -284,6 +303,7 @@ export function useTasks() {
         userName,
         setUserName: saveUserName,
         installDate,
-        getStats
+        getStats,
+        hasRecentTasks // Bug 51
     };
 }

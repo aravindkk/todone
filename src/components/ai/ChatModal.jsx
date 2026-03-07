@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Dialog } from "../ui/Dialog";
-import { Send, Bot, User, Loader2, Check, X } from "lucide-react";
+import { Send, MessageCircle, User, Loader2, Check, X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onAddTask }) {
@@ -65,7 +65,7 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
             <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                     <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                        <Bot className="w-5 h-5" />
+                        <MessageCircle className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                         <h3 className="font-semibold text-slate-800 truncate max-w-[280px]" title={task.description}>
@@ -76,32 +76,25 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
                         </p>
                     </div>
                 </div>
-                <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-lg transition-colors shrink-0">
-                    <X className="w-5 h-5" />
-                </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30">
-                {history.length === 0 && (
-                    <div className="text-center py-6 text-slate-400 flex flex-col items-center">
-                        <Bot className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                        <p className="mb-6">How can I help you with this task?</p>
-                        <div className="flex flex-col gap-2 w-full max-w-sm">
-                            {[
-                                "Break this down into smaller steps",
-                                "How long should this take?",
-                                "Give me a quick tip to start"
-                            ].map(prompt => (
-                                <button
-                                    key={prompt}
-                                    onClick={() => onSend(prompt)}
-                                    className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl text-sm hover:bg-slate-50 hover:border-blue-200 transition-colors text-left"
-                                >
-                                    {prompt}
-                                </button>
-                            ))}
-                        </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-50/30">
+                {history.length === 0 && !loading && (
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
+                        <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                        <p className="text-center font-medium">How can I help you with this task?</p>
+                        <p className="text-sm text-center mt-2 opacity-70">
+                            I can break it down, suggest ideas, or write a draft.
+                        </p>
+                    </div>
+                )}
+
+                {/* Render Task Description */}
+                {task && (
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-slate-700 font-medium">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Target Task</span>
+                        {task.description}
                     </div>
                 )}
 
@@ -117,7 +110,7 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
                             "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
                             msg.role === 'user' ? "bg-slate-200 text-slate-600" : "bg-blue-100 text-blue-600"
                         )}>
-                            {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                            {msg.role === 'user' ? <User className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
                         </div>
                         <div className="flex flex-col gap-2">
                             <div className={cn(
@@ -207,6 +200,6 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
                     </button>
                 </form>
             </div>
-        </Dialog>
+        </Dialog >
     );
 }

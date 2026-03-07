@@ -119,7 +119,7 @@ export function ClarificationModal({ isOpen, onClose, question, originalTask, su
                         >
                             <Plus className="w-4 h-4" />
                             Add Tasks ({
-                                (value.trim() && value !== originalTask ? 1 : 0) + selectedSusp.length
+                                (value.trim() && value !== originalTask ? 1 : 0) + selectedSusp.filter(Boolean).length
                             })
                         </button>
                         <button

@@ -8,7 +8,6 @@ import { BreakdownModal } from "./ai/BreakdownModal";
 import { InterventionModal } from "./ai/InterventionModal";
 import { ClarificationModal } from "./ai/ClarificationModal";
 import { EditTaskModal } from "./EditTaskModal";
-import { CalendarView } from "./CalendarView";
 import { OnboardingModal } from "./OnboardingModal";
 import { AccomplishmentsModal } from "./AccomplishmentsModal";
 import { DailyRecapModal } from "./DailyRecapModal";
@@ -18,20 +17,37 @@ import { RatingPrompt } from "./RatingPrompt";
 import { TaskNotesModal } from "./TaskNotesModal";
 import { MentorshipModal } from "./MentorshipModal";
 import { TaskLimitWarningModal } from "./TaskLimitWarningModal";
+import { GamePlanModal } from "./GamePlanModal";
 import { Confetti, Toast } from "./ui/Confetti";
 import { aiService } from "../services/ai";
 import { analytics } from "../services/analytics";
 import { storage } from "../lib/storage";
 import { cn } from "../lib/utils";
-import { Activity, Clock, LogOut, CheckCircle2, ChevronDown, Calendar, LineChart, Target, Radio, ArrowRight, ListOrdered } from "lucide-react";
+import { Activity, Clock, LogOut, CheckCircle2, ChevronDown, Calendar, LineChart, Target, Radio, ArrowRight, ListOrdered, Flame, Snowflake } from "lucide-react";
 
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 export function Dashboard() {
-    const { tasks, loading, addTask, addMultipleTasks, reorderTasks, completeTask, pinTask, deleteTask, updateTask, streak, toggleTimer, startTimer, userName, setUserName, installDate, getStats } = useTasks();
+    const { tasks, loading, addTask, addMultipleTasks, reorderTasks, completeTask, pinTask, deleteTask, updateTask, streak, toggleTimer, startTimer, userName, setUserName, installDate, getStats, hasRecentTasks } = useTasks();
     const [showAll, setShowAll] = useState(false);
     const [showCompleted, setShowCompleted] = useState(true);
+
+    // Bug 53: Initialize showCompleted from storage
+    useEffect(() => {
+        const loadSettings = async () => {
+            const savedSetting = await storage.get('todo_show_completed', true);
+            setShowCompleted(savedSetting);
+        };
+        loadSettings();
+    }, []);
+
+    const toggleShowCompleted = async () => {
+        const newValue = !showCompleted;
+        setShowCompleted(newValue);
+        await storage.set('todo_show_completed', newValue);
+    };
+
     const [focusTaskId, setFocusTaskId] = useState(null); // Fix Bug 29: Specific task focus
     const [focusTaskDuration, setFocusTaskDuration] = useState(null); // Initial duration for Focus Mode
     const [isStatsOpen, setIsStatsOpen] = useState(false);
@@ -45,6 +61,9 @@ export function Dashboard() {
     // Rating Prompt Logic
     const [showRating, setShowRating] = useState(false);
     const [currentMilestone, setCurrentMilestone] = useState(null);
+
+    // Bug 59: Game Plan Modal
+    const [showGamePlan, setShowGamePlan] = useState(false);
 
     useEffect(() => {
         if (!installDate) return;
@@ -76,19 +95,22 @@ export function Dashboard() {
     // Task Notes & Interventions (Feature 8)
     const [notesModal, setNotesModal] = useState({ isOpen: false, task: null, type: null });
 
+    // Help Prompt (Feature 10)
     useEffect(() => {
         if (loading || tasks.length === 0) return;
 
-        // Run once on load: 20% chance to prompt for help on an old open task
-        const hasPrompted = sessionStorage.getItem('todo_help_prompted');
-        if (!hasPrompted) {
-            const oldTasks = tasks.filter(t => !t.completed && t.createdAt && (new Date() - new Date(t.createdAt)) / (1000 * 60 * 60 * 24) > 3);
-            if (oldTasks.length > 0 && Math.random() < 0.2) {
-                const randomTask = oldTasks[Math.floor(Math.random() * oldTasks.length)];
-                setNotesModal({ isOpen: true, task: randomTask, type: 'help' });
+        const checkHelpPrompt = async () => {
+            const hasPrompted = await storage.get('todo_help_prompted', false);
+            if (!hasPrompted) {
+                const oldTasks = tasks.filter(t => !t.completed && t.createdAt && (new Date() - new Date(t.createdAt)) / (1000 * 60 * 60 * 24) > 3);
+                if (oldTasks.length > 0 && Math.random() < 0.2) {
+                    const randomTask = oldTasks[Math.floor(Math.random() * oldTasks.length)];
+                    setNotesModal({ isOpen: true, task: randomTask, type: 'help' });
+                }
+                await storage.set('todo_help_prompted', true);
             }
-            sessionStorage.setItem('todo_help_prompted', 'true');
-        }
+        };
+        checkHelpPrompt();
     }, [loading, tasks]);
 
     // Mentorship Prompt (Feature 11)
@@ -113,38 +135,50 @@ export function Dashboard() {
     useEffect(() => {
         if (loading || tasks.length === 0) return;
 
-        const hasPrompted = sessionStorage.getItem('todo_mentorship_prompted');
-        if (!hasPrompted) {
-            const threeDaysAgo = new Date();
-            threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        const checkMentorshipPrompt = async () => {
+            const hasPrompted = await storage.get('todo_mentorship_prompted', false);
+            if (!hasPrompted) {
+                const threeDaysAgo = new Date();
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-            const recentTasks = tasks.filter(t => t.createdAt && new Date(t.createdAt) >= threeDaysAgo);
+                const recentTasks = tasks.filter(t => t.createdAt && new Date(t.createdAt) >= threeDaysAgo);
 
-            if (recentTasks.length > 10) {
-                setShowMentorship(true);
-                sessionStorage.setItem('todo_mentorship_prompted', 'true');
+                if (recentTasks.length > 10) {
+                    setShowMentorship(true);
+                    // Bug 54: We only set prompted=true when explicitly dismissed, so it keeps showing
+                    // until the user dismisses. Thus, remove the setItem here.
+                }
             }
-        }
+        };
+        checkMentorshipPrompt();
     }, [loading, tasks]);
+
+    const handleDismissMentorship = async () => {
+        setShowMentorship(false);
+        await storage.set('todo_mentorship_prompted', true);
+    };
 
     // Sorting Prompt (Feature 16)
     const [showSortPrompt, setShowSortPrompt] = useState(false);
 
     useEffect(() => {
         if (loading) return;
-        const openCount = tasks.filter(t => !t.completed).length;
-        const hasSorted = sessionStorage.getItem('todo_has_sorted');
+        const checkSortPrompt = async () => {
+            const openCount = tasks.filter(t => !t.completed).length;
+            const hasSorted = await storage.get('todo_has_sorted', false);
 
-        if (openCount >= 3 && !hasSorted) {
-            setShowSortPrompt(true);
-        } else {
-            setShowSortPrompt(false);
-        }
+            if (openCount >= 3 && !hasSorted) {
+                setShowSortPrompt(true);
+            } else {
+                setShowSortPrompt(false);
+            }
+        };
+        checkSortPrompt();
     }, [tasks, loading]);
 
-    const handleDismissSortPrompt = () => {
+    const handleDismissSortPrompt = async () => {
         setShowSortPrompt(false);
-        sessionStorage.setItem('todo_has_sorted', 'true');
+        await storage.set('todo_has_sorted', true);
     };
 
     // Feature 17: Daily AI Recap
@@ -280,9 +314,8 @@ export function Dashboard() {
 
     // Edit Modal State
     const [editModal, setEditModal] = useState({ isOpen: false, taskId: null, currentDescription: "", initialDate: null });
-    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-    // Feature 15: Focus Mode Animation State
+    // Feature 15 & Bug 46: Focus Mode Animation State
     const [focusingTaskId, setFocusingTaskId] = useState(null);
 
     // Track app open
@@ -314,7 +347,15 @@ export function Dashboard() {
     const today = normalizeDate(new Date());
     const tomorrow = normalizeDate(new Date(Date.now() + 86400000));
 
-    const todayTasks = sortedTasks.filter(t => normalizeDate(t.scheduledDate) <= today && (showCompleted || !t.completed));
+    const todayTasks = sortedTasks.filter(t => {
+        // Bug 52: If completed, must have been completed today to show in today's section
+        if (t.completed && t.completedAt) {
+            const completedDate = normalizeDate(t.completedAt);
+            if (completedDate < today) return false;
+        }
+        return normalizeDate(t.scheduledDate) <= today && (showCompleted || !t.completed);
+    });
+
     const tomorrowTasks = sortedTasks.filter(t => normalizeDate(t.scheduledDate) === tomorrow && (showCompleted || !t.completed));
     const laterTasks = sortedTasks.filter(t => normalizeDate(t.scheduledDate) > tomorrow && (showCompleted || !t.completed));
 
@@ -329,13 +370,23 @@ export function Dashboard() {
     const handleDragEnd = (event) => {
         const { active, over } = event;
 
-        if (active.id !== over.id) {
+        if (active && over && active.id !== over.id) {
             const oldIndex = tasks.findIndex((t) => t.id === active.id);
             const newIndex = tasks.findIndex((t) => t.id === over.id);
 
             if (oldIndex !== -1 && newIndex !== -1) {
-                const newTasks = arrayMove(tasks, oldIndex, newIndex);
-                reorderTasks(newTasks);
+                const newTasks = [...tasks];
+                const activeTask = { ...newTasks[oldIndex] };
+                const overTask = newTasks[newIndex];
+
+                // Bug 47: Move task date if dragged across categories
+                if (normalizeDate(activeTask.scheduledDate) !== normalizeDate(overTask.scheduledDate)) {
+                    activeTask.scheduledDate = overTask.scheduledDate;
+                }
+
+                newTasks[oldIndex] = activeTask;
+                const reordered = arrayMove(newTasks, oldIndex, newIndex);
+                reorderTasks(reordered);
             }
         }
     };
@@ -558,8 +609,12 @@ export function Dashboard() {
     };
 
     const handleFocusTask = (taskId, duration = null) => {
-        setFocusTaskId(taskId);
-        setFocusTaskDuration(duration);
+        setFocusingTaskId(taskId);
+        setTimeout(() => {
+            setFocusTaskId(taskId);
+            setFocusTaskDuration(duration);
+            setFocusingTaskId(null);
+        }, 600); // Wait for the 500ms transition to finish before entering Focus Mode
     };
 
     const currentFocusTask = focusTaskId ? tasks.find(t => t.id === focusTaskId) : null;
@@ -605,6 +660,7 @@ export function Dashboard() {
                         showDate={showDate}
                         showDragHandle={isSortable && !task.pinned && !task.completed}
                         isFocusing={focusingTaskId === task.id}
+                        isNotFocusing={focusingTaskId !== null && focusingTaskId !== task.id}
                     />
                 ))}
                 {tasks.length === 0 && emptyMsg && (
@@ -638,11 +694,7 @@ export function Dashboard() {
                                 onClick={() => {
                                     const firstActive = visibleTodayTasks.find(t => !t.completed) || sortedTasks.find(t => !t.completed);
                                     if (firstActive) {
-                                        setFocusingTaskId(firstActive.id);
-                                        setTimeout(() => {
-                                            handleFocusTask(firstActive.id);
-                                            setFocusingTaskId(null);
-                                        }, 800);
+                                        handleFocusTask(firstActive.id);
                                     }
                                 }}
                                 className="flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white rounded-lg shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all font-medium text-sm"
@@ -651,16 +703,38 @@ export function Dashboard() {
                                 Focus Mode
                             </button>
                         )}
-                        <button onClick={() => setIsStatsOpen(true)} className="hover:scale-105 transition-transform">
-                            <StreakCounter streak={streak} />
-                        </button>
-                        <button
-                            onClick={() => setIsCalendarOpen(true)}
-                            className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                            title="View History"
-                        >
-                            <Calendar className="w-5 h-5" />
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowGamePlan(true)}
+                                className={cn(
+                                    "flex items-center justify-center p-2 rounded-xl transition-all font-semibold",
+                                    "bg-white border-2 border-slate-200 text-slate-700 hover:border-blue-400 shadow-sm"
+                                )}
+                                title="Game Plan"
+                            >
+                                <Target className="w-5 h-5 text-blue-500" />
+                            </button>
+                            <button
+                                onClick={() => setIsStatsOpen(true)}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all font-semibold",
+                                    streak?.isFrozen
+                                        ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
+                                        : !hasRecentTasks
+                                            ? "bg-white border-2 border-slate-200 text-slate-500 hover:border-slate-300 shadow-sm"
+                                            : "bg-orange-50 text-orange-600 border-2 border-orange-200"
+                                )}
+                            >
+                                {streak?.isFrozen ? (
+                                    <Snowflake className="w-4 h-4 text-blue-500" />
+                                ) : !hasRecentTasks ? (
+                                    <Flame className="w-4 h-4 text-blue-400" />
+                                ) : (
+                                    <Flame className="w-4 h-4 text-orange-500" />
+                                )}
+                                {streak?.count || 0}
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -695,7 +769,11 @@ export function Dashboard() {
                         onDragEnd={handleDragEnd}
                     >
                         <SortableContext
-                            items={visibleTodayTasks.filter(t => !t.pinned && !t.completed).map(t => t.id)}
+                            items={[
+                                ...visibleTodayTasks.filter(t => !t.pinned && !t.completed).map(t => t.id),
+                                ...visibleTomorrowTasks.filter(t => !t.completed).map(t => t.id),
+                                ...visibleLaterTasks.filter(t => !t.completed).map(t => t.id)
+                            ]}
                             strategy={verticalListSortingStrategy}
                         >
                             <TaskList
@@ -705,42 +783,42 @@ export function Dashboard() {
                                 isSortable={true}
                                 onStartTimer={startTimer}
                             />
+
+                            {/* Controls Footer */}
+                            <div className="mt-4 mb-8 flex items-center justify-center gap-4">
+                                {hiddenCount > 0 && !showAll && (
+                                    <button
+                                        onClick={() => setShowAll(true)}
+                                        className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all bg-white px-5 py-2.5 rounded-xl border-2 border-slate-200 shadow-sm hover:border-slate-300 hover:bg-slate-50 flex flex-1 max-w-[200px] justify-center"
+                                    >
+                                        Show {hiddenCount} more
+                                    </button>
+                                )}
+                                {showAll && (todayTasks.length > 5 || tomorrowTasks.length > 5 || laterTasks.length > 5) && (
+                                    <button
+                                        onClick={() => setShowAll(false)}
+                                        className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all bg-white px-5 py-2.5 rounded-xl border-2 border-slate-200 shadow-sm hover:border-slate-300 hover:bg-slate-50 flex flex-1 max-w-[200px] justify-center"
+                                    >
+                                        Show less
+                                    </button>
+                                )}
+                                <button
+                                    onClick={toggleShowCompleted}
+                                    className="text-sm font-semibold text-slate-600 hover:text-slate-900 transition-all bg-white px-5 py-2.5 rounded-xl border-2 border-slate-200 shadow-sm hover:border-slate-300 hover:bg-slate-50 flex flex-1 max-w-[200px] justify-center"
+                                >
+                                    {showCompleted ? "Hide completed" : "Show completed"}
+                                </button>
+                            </div>
+
+                            {visibleTomorrowTasks.length > 0 && (
+                                <TaskList tasks={visibleTomorrowTasks} title="Tomorrow" showDate isSortable={true} onStartTimer={startTimer} />
+                            )}
+
+                            {visibleLaterTasks.length > 0 && (
+                                <TaskList tasks={visibleLaterTasks} title="Later" showDate isSortable={true} onStartTimer={startTimer} />
+                            )}
                         </SortableContext>
                     </DndContext>
-
-                    {/* Controls Footer */}
-                    <div className="mt-4 mb-8 flex items-center justify-center gap-4">
-                        {hiddenCount > 0 && !showAll && (
-                            <button
-                                onClick={() => setShowAll(true)}
-                                className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors bg-white/50 px-4 py-2 rounded-full border border-slate-200 shadow-sm hover:bg-white"
-                            >
-                                Show {hiddenCount} more
-                            </button>
-                        )}
-                        {showAll && (todayTasks.length > 5 || tomorrowTasks.length > 5 || laterTasks.length > 5) && (
-                            <button
-                                onClick={() => setShowAll(false)}
-                                className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors bg-white/50 px-4 py-2 rounded-full border border-slate-200 shadow-sm hover:bg-white"
-                            >
-                                Show less
-                            </button>
-                        )}
-                        <button
-                            onClick={() => setShowCompleted(!showCompleted)}
-                            className="text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors bg-white/50 px-4 py-2 rounded-full border border-slate-200 shadow-sm hover:bg-white"
-                        >
-                            {showCompleted ? "Hide completed" : "Show completed"}
-                        </button>
-                    </div>
-
-                    {visibleTomorrowTasks.length > 0 && (
-                        <TaskList tasks={visibleTomorrowTasks} title="Tomorrow" showDate onStartTimer={startTimer} />
-                    )}
-
-                    {visibleLaterTasks.length > 0 && (
-                        <TaskList tasks={visibleLaterTasks} title="Later" showDate onStartTimer={startTimer} />
-                    )}
                 </div>
             </div>
 
@@ -788,12 +866,6 @@ export function Dashboard() {
                 onSave={handleSaveEdit}
             />
 
-            <CalendarView
-                isOpen={isCalendarOpen}
-                onClose={() => setIsCalendarOpen(false)}
-                tasks={tasks}
-            />
-
             <OnboardingModal
                 isOpen={!loading && !userName}
                 onSave={setUserName}
@@ -806,6 +878,15 @@ export function Dashboard() {
                 streak={streak}
                 userName={userName}
                 tasks={tasks} // Pass tasks for local time distributions
+                hasRecentTasks={hasRecentTasks}
+            />
+
+            <GamePlanModal
+                isOpen={showGamePlan}
+                onClose={() => setShowGamePlan(false)}
+                userName={userName}
+                todayTasks={todayTasks}
+                onPinTask={pinTask}
             />
 
             <DailyRecapModal
@@ -823,7 +904,7 @@ export function Dashboard() {
 
             <MentorshipModal
                 isOpen={showMentorship}
-                onClose={() => setShowMentorship(false)}
+                onClose={handleDismissMentorship}
                 userName={userName}
             />
 
@@ -845,10 +926,7 @@ export function Dashboard() {
                 onSave={handleSaveNotes}
             />
 
-            <MentorshipModal
-                isOpen={showMentorship}
-                onClose={() => setShowMentorship(false)}
-            />
+
 
             <TaskLimitWarningModal
                 isOpen={taskLimitWarning.isOpen}

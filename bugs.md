@@ -51,3 +51,27 @@ Comments: Timer is still running slow if I move to another tab. I verified by st
 41. [Done] [Verified] [Redo-1] Allow links in the task text during task creation, and updates. For example, review this doc with a link should show link as text and the href for it as the actual link address. 
 Comments: The link should be shown in text as "link". Right now the whole link is showing and it makes the view pretty poor. 
 42. [Done] [Verified] When a task has a link and it is opened in focus mode, the full link address is shown, it should continue to show only the word link.
+// After publishing to chrome web store
+43. [Done] [Verified] The daily rhythm section is broken. Just remove this section altogether in the Streak page.
+44. [Done] [Verified] Change Activity log to last 30 days instead, last year is too long a time period
+45. [Done] [Verified] Close buttons/icons should be on the top right for all modals/views. On history view, it only shows a Close button, instead of a icon and it is at the bottom of the page. On the streak screen, there is no close icon. Do a careful check of all the modals and windows in the whole chrome extension.
+46. [Done] [Verified] [Redo-1] Improve animation for focus mode, it seems very engineered and not user friendly
+Comments: There is no animation now. Do a better animation like the first row pushes the other rows out of focus and then smoothly transition to the focus mode screen.
+47. [Done] [Verified] Task moved to tomorrow cannot be moved back to today through drag and drop.
+48. [Done] [Verified] Delete the history icon/button and screen. It’s not adding much value.
+49. [Done] [Verified] The focus mode font and view looks very amateurish and out of theme compared to the rest of the extension.
+50. [Done] [Verified] When the AI is evaluating the task entered, for a visible few seconds the task entry box is empty making the user anxious as if the task they entered has just disappeared.
+51. [Done] [Verified] [Redo-1] If a user has no tasks created in the last 7 days, show the Streak icon and button as blue in color to signify the fire is cold now and waiting for tasks. When user clicks on the Streak, show a screen with visible section titles and blurred out view under the sections. Over the blurred section Activity Log, show the text in bold and large font as  - “Build your streak by adding and completing tasks!”
+Comments: This part is not addressed yet: When user clicks on the Streak, show a screen with visible section titles and blurred out view under the sections. Over the blurred section Activity Log, show the text in bold and large font as  - “Build your streak by adding and completing tasks!”
+52. Never show any completed items which were not completed today in today’s section. Items which were completed yesterday belong to yesterday, not today. Do double check and fix the logic of date and which sections the tasks show in. It should be based on the local time of the user, not by the server time.
+53. Clicking on Hide completed or Show completed resets after going to new tab again. This is bad, remember the setting for the user till the user clicks on the setting and changes. This should be a user level setting.
+54. When a dialog or modal or a message/toast is shown to user, let user take some action like dismiss or ack it. If they don’t do it, show the same dialog or modal in every new tab they open as well. Only when they ack or dismiss it, should you stop showing it again for that user for that instance of message.
+55. The number of tasks in the Add tasks button below is buggy. It often shows a number much higher than the tasks selected. In one case, only 3 micro tasks were chosen and it shows +Add tasks(6). It should be +Add tasks(3).
+56. The button should be Start instead of Pause at the start of the focus mode. Right now when focus mode is started, user selects the time as 5 mins and the timer does not start and the button shows as Pause below it - which is wrong.
+57. The icon shown for the AI assistant in the AI chat modal is very amateurish and childish. Please pick something professional.
+59. Create a aim icon at the top which when clicked should bring a modal with the game plan for today to accomplish the tasks that the user has today. If the user has no important item marked by the user, ask them to pick atleast one important item for today. Show the items for today inline and ask them to mark the important item. Once marked as important(pin), the item should move to the top as in the home screen.Once important task is identified, then allow user to generate game plan. In the game plan, emphasize on the importance of the important tasks and talk about the rough time they would need to get completed. Ask user to block sufficient time on their calendar to ensure they get uninterrupted time to finish the tasks.
+60. Show streak at the top in the title of the modal and remove the Tasks count and all time task count - they are not serving any purpose.
+61. On the Streak view, show what percentage of tasks does the user move tasks and what sort of tasks does the user move often. Show this below the activity log.
+
+
+

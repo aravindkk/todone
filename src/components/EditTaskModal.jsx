@@ -75,7 +75,7 @@ export function EditTaskModal({ isOpen, onClose, initialTask, initialDate, initi
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Notes & Context (Who helped you?)
+                            Notes & Context
                         </label>
                         <textarea
                             value={notesValue}

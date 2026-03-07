@@ -18,7 +18,8 @@ export function TaskCard({
     onFocusTask,
     showDate,
     showDragHandle = true,
-    isFocusing = false // Feature 15
+    isFocusing = false, // The selected task
+    isNotFocusing = false // All other tasks fading out
 }) {
     const [isHovered, setIsHovered] = useState(false);
     const isMoved = task.moveCount > 0;
@@ -95,7 +96,8 @@ export function TaskCard({
                 isDragging && "opacity-50 blur-[1px] shadow-lg border-blue-200 scale-100",
                 task.isRunning && "border-orange-200 shadow-orange-100/50 ring-1 ring-orange-100",
                 task.pinned && "border-blue-100 shadow-blue-50/50",
-                isFocusing && "ring-4 ring-blue-500 scale-[1.03] shadow-2xl z-50 animate-pulse border-transparent transition-all duration-300"
+                isFocusing && "z-50 scale-105 shadow-2xl border-blue-400 bg-blue-50/20 ring-4 ring-blue-500/20 duration-500 ease-out translate-y-2",
+                isNotFocusing && "opacity-0 scale-95 blur-sm translate-y-8 duration-500 ease-in pointer-events-none"
             )}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -137,7 +139,7 @@ export function TaskCard({
                     </div>
                     {task.completed && task.createdAt && task.completedAt && (
                         <span className="text-[11px] text-slate-400 mt-0.5 tracking-wide">
-                            Open for {formatTimeOpen(task.createdAt, task.completedAt)}
+                            Completed in {formatTimeOpen(task.createdAt, task.completedAt)}
                         </span>
                     )}
                     {showDate && task.scheduledDate && !task.completed && (

@@ -22,7 +22,10 @@ const userDailyUsage = new Map(); // { userId: { count: number, date: string } }
 
 function checkDailyLimit(req, res, next) {
     const userId = req.body?.userContext?.userName || req.ip;
-    const today = new Date().toISOString().split('T')[0];
+
+    // Get local system time in YYYY-MM-DD format instead of UTC
+    const now = new Date();
+    let today = req.body?.userContext?.localDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     const usage = userDailyUsage.get(userId) || { count: 0, date: today };
 
@@ -213,6 +216,42 @@ Respond with JSON only:
     } catch (error) {
         console.error('Gemini API Error:', error);
         res.status(500).json({ error: 'Failed to generate intervention' });
+    }
+});
+
+// Bug 59: Endpoint: Generate Game Plan
+app.post('/api/generate-game-plan', checkDailyLimit, async (req, res) => {
+    try {
+        const { userName, targetTasks, otherTasks, userContext } = req.body;
+        const model = getModel('gemini-2.5-flash');
+
+        const localTimeInfo = userContext?.localDate ? `\nToday's Date: ${userContext.localDate}` : "";
+
+        const prompt = `${TODONE_SYSTEM_INSTRUCTION}
+You are an expert productivity coach.
+User: ${userName || 'Friend'}
+${localTimeInfo}
+
+Top Priority Targets (these must be done today):
+${targetTasks.map(t => `- ${t}`).join('\n')}
+
+Other Tasks on their plate:
+${otherTasks.length > 0 ? otherTasks.map(t => `- ${t}`).join('\n') : "(None)"}
+
+Generate a "Game Plan" for the day. 
+Address the user by name. Be encouraging, highly strategic, and concise.
+Draft a timeline (Morning/Afternoon/Evening or Time-blocked) incorporating these tasks, heavily prioritizing the "Targets". 
+Give a short tip on how to handle the other tasks.
+
+Respond with pure text formatted with markdown (bold, bullet points, headers like "🎯 Your Targets", "🗓️ The Plan"). Do not wrap in JSON.
+`;
+
+        const result = await model.generateContent(prompt);
+        const plan = result.response.text();
+        res.json({ plan });
+    } catch (error) {
+        console.error('Gemini API Error:', error);
+        res.status(500).json({ error: 'Failed to generate game plan' });
     }
 });
 

@@ -33,7 +33,7 @@ export function RatingPrompt({ onDismiss }) {
                 </div>
                 <div className="shrink-0 mt-3 sm:mt-0 w-full sm:w-auto">
                     <a
-                        href="https://chromewebstore.google.com/detail/adblock-plus-free-ad-bloc/cfhdojbkjhnklbpkdaibdccddilifddb/reviews?ref=store-rating"
+                        href="https://chromewebstore.google.com/detail/todo/godphnjdefiplhmfcepkchdehmgjfadp/reviews?ref=store-rating"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full text-center px-6 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-xl transition-colors shadow-sm active:scale-95"
