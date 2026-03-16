@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <!-- Essential Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo AI - The Smart Chrome Todo Extension for Productivity</title>
+    <meta name="description"
+        content="Boost productivity with Todo, the AI-powered Chrome extension. Manage tasks in your new tab, use Focus Mode, and let our smart assistant break down projects.">
+    <meta name="keywords"
+        content="todo, todo ai, todo extension, chrome extension, task manager, chrome productivity tools, smart task organizer">
+    <link rel="canonical" href="https://todoextension.com">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Todo AI - The Smart Chrome Todo Extension for Productivity">
+    <meta property="og:description"
+        content="Boost productivity with Todo, the AI-powered Chrome extension. Manage tasks in your new tab, use Focus Mode, and let our smart assistant break down projects.">
+    <meta property="og:image" content="https://todoextension.com/og-image.jpg">
+    <meta property="og:url" content="https://todoextension.com">
+    <meta property="og:type" content="website">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488', // Teal accent
+                            900: '#134e4a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Schema.org markup for AEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Todo",
+      "applicationCategory": "BrowserApplication",
+      "operatingSystem": "Chrome OS, Windows, macOS, Linux",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "What is the Todo Chrome extension?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Todo is a smart AI-powered task manager that replaces your Chrome new tab page. It helps you stay focused and productive by combining task management, a focus timer, and AI assistance."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Is the Todo extension free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, Todo is completely free to add to Chrome and basic features require no credit card."
+        }
+      }, {
+        "@type": "Question",
+        "name": "How does the AI task breakdown work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "When you have a large or ambiguous task, the built-in AI assistant breaks it down into actionable subtasks with time estimates, turning complex projects into simple steps."
+        }
+      }, {
+        "@type": "Question",
+        "name": "What are the AI features?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "With intelligent nudges to help you complete tasks, break down complex tasks, help you tap into your network of friends and coworkers, your productivity is about to go up."
+        }
+      }]
+    }
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <img src="images/icon128.png" alt="Todo icon" class="w-8 h-8">
+                    <span class="font-bold text-xl tracking-tight text-slate-800">Todo</span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#features"
+                        class="text-slate-600 hover:text-slate-900 font-medium transition-colors">Features</a>
+                    <a href="#how-it-works"
+                        class="text-slate-600 hover:text-slate-900 font-medium transition-colors">How it Works</a>
+                    <a href="#faq" class="text-slate-600 hover:text-slate-900 font-medium transition-colors">FAQ</a>
+                </div>
+                <div>
+                    <a href="https://chromewebstore.google.com/detail/todo/godphnjdefiplhmfcepkchdehmgjfadp"
+                        target="_blank"
+                        class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm transition-all hover:shadow-md cursor-pointer">
+                        Add to Chrome Free
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="pt-32 pb-16 sm:pt-40 sm:pb-20 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1
+                class="mx-auto max-w-4xl font-display text-5xl font-extrabold tracking-tight text-slate-900 sm:text-7xl">
+                The Smart AI Todo Extension for Chrome
+            </h1>
+            <p class="mx-auto mt-6 max-w-2xl text-lg tracking-tight text-slate-600">
+                Stop context switching. Turn your new tab into an AI-powered productivity coach that breaks down tasks,
+                tracks your focus, and helps you get unstuck.
+            </p>
+            <div class="mt-10 flex flex-col sm:flex-row justify-center gap-3 px-4">
+                <a href="https://chromewebstore.google.com/detail/todo/godphnjdefiplhmfcepkchdehmgjfadp" target="_blank"
+                    class="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold rounded-2xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-1">
+                    <svg class="w-4 h-4 mr-2 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 21.818c-5.414 0-9.818-4.404-9.818-9.818S6.586 2.182 12 2.182s9.818 4.404 9.818 9.818-4.404 9.818-9.818 9.818zM11 6h2v5h5v2h-7V6z" />
+                    </svg>
+                    Add to Chrome - It's Free
+                </a>
+                <a href="#features"
+                    class="inline-flex items-center justify-center px-6 py-3 text-sm font-medium rounded-2xl text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+                    Features
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Screenshot -->
+    <section class="bg-slate-50 py-16 border-y border-slate-100">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <img src="images/screenshot_dashboard.png" alt="Todo dashboard in Chrome new tab"
+                width="1200" height="800"
+                class="rounded-2xl shadow-2xl shadow-indigo-200/50 border border-slate-100 w-full h-auto">
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 scroll-mt-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl text-balance">
+                    Everything you need to get things done.
+                </h2>
+                <p class="mt-4 text-lg text-slate-600">
+                    A beautifully crafted chrome todo extension packed with AI features to manage your day.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div
+                    class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:border-blue-100 transition-colors">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">AI Chat Assistant</h3>
+                    <p class="text-slate-600 leading-relaxed">Chat with a built-in productivity coach directly in your
+                        browser. Get advice, brainstorming help, or actionable steps for any task.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div
+                    class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:border-indigo-100 transition-colors">
+                    <div
+                        class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Smart Task Breakdown</h3>
+                    <p class="text-slate-600 leading-relaxed">Overwhelmed? Click one button and the AI automatically
+                        turns ambiguous, large projects into actionable subtasks with time estimates.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div
+                    class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:border-purple-100 transition-colors">
+                    <div
+                        class="w-12 h-12 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Focus Timer</h3>
+                    <p class="text-slate-600 leading-relaxed">Built-in Pomodoro-style timer to launch "Focus Mode" for
+                        specific tasks. Stop browsing distractions and execute deep work efficiently.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div
+                    class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:border-orange-100 transition-colors">
+                    <div
+                        class="w-12 h-12 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Productivity Analytics</h3>
+                    <p class="text-slate-600 leading-relaxed">Track your streaks, view activity heatmaps, and identify
+                        "stuck" tasks that keep getting postponed to tomorrow.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div
+                    class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:border-emerald-100 transition-colors">
+                    <div
+                        class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Drag & Drop Prioritization</h3>
+                    <p class="text-slate-600 leading-relaxed">Manage tasks visually with fluid, satisfying drag-and-drop
+                        mechanics. Effortlessly reorganize your day on the fly.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div
+                    class="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:border-rose-100 transition-colors">
+                    <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Daily Summaries & Celebrations</h3>
+                    <p class="text-slate-600 leading-relaxed">Get an encouraging Daily Recap each morning and visual
+                        confetti celebrations when you complete difficult or long-pending tasks.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works & Screenshots -->
+    <section id="how-it-works" class="py-24 scroll-mt-16 bg-slate-50 border-y border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <!-- Section header -->
+            <div class="text-center max-w-2xl mx-auto mb-20">
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl text-balance mb-4">
+                    Stay in your flow, right in your browser.
+                </h2>
+                <p class="text-lg text-slate-600">
+                    Todo replaces your Chrome new tab. Every time you open a tab, your priorities are front and center.
+                </p>
+            </div>
+
+            <!-- Step 1 -->
+            <div class="grid lg:grid-cols-2 gap-12 items-center mb-20">
+                <div class="flex gap-6 items-start">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600 mt-1">1</div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-900 mb-2">Open a New Tab</h4>
+                        <p class="text-slate-600">Your task list is instantly available natively in Chrome. No need to load heavy standalone apps.</p>
+                    </div>
+                </div>
+                <img src="images/screenshot_firsttask.png" alt="Todo task list in a new Chrome tab"
+                    width="684" height="383"
+                    class="rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200 w-full h-auto">
+            </div>
+
+            <!-- Step 2 -->
+            <div class="grid lg:grid-cols-2 gap-12 items-center mb-20">
+                <div class="flex gap-6 items-start">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-600 mt-1">2</div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-900 mb-2">Let AI Coach You</h4>
+                        <p class="text-slate-600">Click the AI chat icon next to any task to brainstorm, or use the "Breakdown" button to split massive tasks into actionable subtasks.</p>
+                    </div>
+                </div>
+                <img src="images/screenshot_chat.png" alt="AI Chat Assistant breaking down a task"
+                    width="610" height="535"
+                    class="rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200 w-full h-auto">
+            </div>
+
+            <!-- Step 3 -->
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="flex gap-6 items-start">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-600 mt-1">3</div>
+                    <div>
+                        <h4 class="text-xl font-bold text-slate-900 mb-2">Complete harder tasks with micro nudges</h4>
+                        <p class="text-slate-600">Some tasks are hard. We get it. Intelligent nudges automatically show up for older tasks to help you get through them.</p>
+                    </div>
+                </div>
+                <img src="images/screenshot_focus.png" alt="Intelligent nudge for a stuck task"
+                    width="603" height="554"
+                    class="rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-200 w-full h-auto">
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Use Cases/Benefits -->
+    <section class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl text-balance">
+                    Who is Todo for?
+                </h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="p-6 border border-slate-100 rounded-2xl bg-slate-50">
+                    <h4 class="text-xl font-bold text-slate-900 mb-3">Developers & Designers</h4>
+                    <p class="text-slate-600">You practically live in the browser. Manage your day without
+                        context-switching to another desktop app.</p>
+                </div>
+                <div class="p-6 border border-slate-100 rounded-2xl bg-slate-50">
+                    <h4 class="text-xl font-bold text-slate-900 mb-3">Students</h4>
+                    <p class="text-slate-600">Use Focus Mode to power through study sessions. Let the AI chat assistant
+                        help you break down overwhelming assignments.</p>
+                </div>
+                <div class="p-6 border border-slate-100 rounded-2xl bg-slate-50">
+                    <h4 class="text-xl font-bold text-slate-900 mb-3">Product Managers</h4>
+                    <p class="text-slate-600">Keep track of your top 5 daily priorities. Review your Weekly Friday
+                        Summaries to report your accomplishments.</p>
+                </div>
+            </div>
+            <p class="text-center text-slate-500 mt-8">and many more!</p>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-24 scroll-mt-16 bg-slate-50 border-t border-slate-200">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl text-balance mb-12 text-center">
+                Frequently Asked Questions
+            </h2>
+            <div class="space-y-6">
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <h4 class="text-lg font-bold text-slate-900 mb-2">What is the Todo Chrome extension?</h4>
+                    <p class="text-slate-600">Todo is a smart AI-powered task manager that replaces your Chrome new tab
+                        page. It helps you stay focused and productive by combining task management, a focus timer, and
+                        AI assistance.</p>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <h4 class="text-lg font-bold text-slate-900 mb-2">Is the Todo extension free?</h4>
+                    <p class="text-slate-600">Yes! The extension is completely free to install. Basic task management
+                        and the focus timer do not cost anything.</p>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <h4 class="text-lg font-bold text-slate-900 mb-2">How does the AI task breakdown work?</h4>
+                    <p class="text-slate-600">When you have a large or ambiguous task, the built-in AI assistant breaks
+                        it down into actionable subtasks with time estimates. You can add these directly to your list to
+                        turn complex projects into simple steps.</p>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <h4 class="text-lg font-bold text-slate-900 mb-2">Is my data secure and private?</h4>
+                    <p class="text-slate-600">Yes! Todo uses Chrome's built-in local and sync storage API. Your tasks
+                        reside locally on your browser.</p>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                    <h4 class="text-lg font-bold text-slate-900 mb-2">What are the AI features?</h4>
+                    <p class="text-slate-600">With intelligent nudges to help you complete tasks, break down complex
+                        tasks, help you tap into your network of friends and coworkers, your productivity is about to go
+                        up.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="py-24 bg-white text-center">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight mb-6">Stop procrastinating. Start doing.
+            </h2>
+            <p class="text-xl text-slate-600 mb-10 max-w-2xl mx-auto">Join thousands of users who have transformed their
+                browsing habits and recovered hours of lost focus time.</p>
+            <a href="https://chromewebstore.google.com/detail/todo/godphnjdefiplhmfcepkchdehmgjfadp" target="_blank"
+                class="inline-flex items-center justify-center px-10 py-5 text-lg font-semibold rounded-2xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-xl shadow-blue-500/30 transition-all hover:scale-105">
+                Add to Chrome - It's Free
+            </a>
+            <p class="mt-4 text-sm text-slate-500 font-medium">No credit card required. Installs in seconds.</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 py-12 border-t border-slate-800">
+        <div
+            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="flex items-center gap-2">
+                <img src="images/icon128.png" alt="Todo icon" class="w-8 h-8">
+                <span class="font-bold text-xl tracking-tight text-white">Todo</span>
+            </div>
+            <p class="text-slate-500 text-sm">© 2026 Todo Extension. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>

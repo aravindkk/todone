@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageSquare, ArrowRight, Check, Plus } from "lucide-react";
 import { Dialog } from "../ui/Dialog";
 import { cn } from "../../lib/utils";
@@ -6,6 +6,13 @@ import { cn } from "../../lib/utils";
 export function ClarificationModal({ isOpen, onClose, question, originalTask, suggestions = [], onRefine }) {
     const [value, setValue] = useState(originalTask);
     const [selectedSusp, setSelectedSusp] = useState([]);
+
+    useEffect(() => {
+        if (isOpen) {
+            setValue(originalTask);
+            setSelectedSusp([]);
+        }
+    }, [isOpen, originalTask]);
 
     const handleToggle = (suggestion) => {
         if (selectedSusp.includes(suggestion.description)) {

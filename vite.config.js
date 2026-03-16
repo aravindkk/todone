@@ -21,7 +21,7 @@ export default defineConfig({
         },
       },
     },
-    sourcemap: true, // Enable source maps for debugging
-    minify: false,   // Disable minification for readable code
+    sourcemap: false,
+    minify: true,
   },
 })

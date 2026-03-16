@@ -7,8 +7,9 @@ import { FocusMode } from "./FocusMode";
 import { BreakdownModal } from "./ai/BreakdownModal";
 import { InterventionModal } from "./ai/InterventionModal";
 import { ClarificationModal } from "./ai/ClarificationModal";
+import { ElaborateModal } from "./ai/ElaborateModal";
 import { EditTaskModal } from "./EditTaskModal";
-import { OnboardingModal } from "./OnboardingModal";
+import { NewUserOnboarding } from "./NewUserOnboarding";
 import { AccomplishmentsModal } from "./AccomplishmentsModal";
 import { DailyRecapModal } from "./DailyRecapModal";
 import { FridaySummaryModal } from "./FridaySummaryModal";
@@ -17,7 +18,6 @@ import { RatingPrompt } from "./RatingPrompt";
 import { TaskNotesModal } from "./TaskNotesModal";
 import { MentorshipModal } from "./MentorshipModal";
 import { TaskLimitWarningModal } from "./TaskLimitWarningModal";
-import { GamePlanModal } from "./GamePlanModal";
 import { Confetti, Toast } from "./ui/Confetti";
 import { aiService } from "../services/ai";
 import { analytics } from "../services/analytics";
@@ -27,6 +27,40 @@ import { Activity, Clock, LogOut, CheckCircle2, ChevronDown, Calendar, LineChart
 
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+function playTaskCompleteSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const master = ctx.createGain();
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.connect(ctx.destination);
+        master.connect(compressor);
+        master.gain.setValueAtTime(0.7, ctx.currentTime);
+
+        // Three-note ascending chime: E5 → G#5 → B5 (like Teams/Meet)
+        const notes = [
+            { freq: 659.25, start: 0, duration: 0.18 },
+            { freq: 830.61, start: 0.14, duration: 0.18 },
+            { freq: 987.77, start: 0.28, duration: 0.45 },
+        ];
+
+        notes.forEach(({ freq, start, duration }) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+            gain.gain.setValueAtTime(0, ctx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + start + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+            osc.connect(gain);
+            gain.connect(master);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + duration);
+        });
+
+        setTimeout(() => ctx.close(), 1200);
+    } catch (_) {}
+}
 
 export function Dashboard() {
     const { tasks, loading, addTask, addMultipleTasks, reorderTasks, completeTask, pinTask, deleteTask, updateTask, streak, toggleTimer, startTimer, userName, setUserName, installDate, getStats, hasRecentTasks } = useTasks();
@@ -61,9 +95,6 @@ export function Dashboard() {
     // Rating Prompt Logic
     const [showRating, setShowRating] = useState(false);
     const [currentMilestone, setCurrentMilestone] = useState(null);
-
-    // Bug 59: Game Plan Modal
-    const [showGamePlan, setShowGamePlan] = useState(false);
 
     useEffect(() => {
         if (!installDate) return;
@@ -192,6 +223,10 @@ export function Dashboard() {
             const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
             if (dayOfWeek === 0 || dayOfWeek === 6) return; // Skip weekends
 
+            // Only show after at least 1 full day since install
+            const daysSinceInstall = installDate ? (today - new Date(installDate)) / (1000 * 60 * 60 * 24) : 0;
+            if (daysSinceInstall < 1) return;
+
             const todayStr = today.toLocaleDateString();
             const lastRecapDate = await storage.get('todo_last_recap_date', null);
 
@@ -232,6 +267,10 @@ export function Dashboard() {
             const today = new Date();
             if (today.getDay() !== 5) return; // Only show on Friday
 
+            // Only show after at least 7 days since install (user has experienced a full week)
+            const daysSinceInstall = installDate ? (today - new Date(installDate)) / (1000 * 60 * 60 * 24) : 0;
+            if (daysSinceInstall < 7) return;
+
             const todayStr = today.toLocaleDateString();
             const lastShown = await storage.get('todo_weekly_summary_shown', null);
 
@@ -267,13 +306,15 @@ export function Dashboard() {
         };
 
         checkFridaySummary();
-    }, [loading, tasks]);
+    }, [loading, tasks, installDate]);
 
     const handleCompleteWrapper = (id) => {
         const task = tasks.find(t => t.id === id);
         completeTask(id);
 
         if (task && !task.completed && task.createdAt) {
+            playTaskCompleteSound();
+
             const ageMs = new Date() - new Date(task.createdAt);
             const ageDays = ageMs / (1000 * 60 * 60 * 24);
 
@@ -425,13 +466,30 @@ export function Dashboard() {
                 return;
             }
 
-            if (!evaluation.isSpecific || !evaluation.canCompleteInOneHour) {
+            // Normalize type — Gemini may return variations in casing/spacing
+            const evalType = (evaluation.type || '').toUpperCase().replace(/\s+/g, '_').trim();
+            const isVague = evalType.includes('VAGUE');
+            const isBig = evalType.includes('BIG') || (!evaluation.isSpecific && evaluation.suggestion?.length > 0) || (evaluation.canCompleteInOneHour === false && evaluation.isSpecific);
+            const isAmbiguous = isVague || (evaluation.isSpecific === false && !evaluation.suggestion?.length);
+
+            if (evaluation.error) {
+                addTask(description);
+            } else if (isAmbiguous) {
+                setAiModal({
+                    type: 'elaborate',
+                    isOpen: true,
+                    data: {
+                        originalTask: description,
+                        elaboratePrompt: evaluation.elaboratePrompt || evaluation.clarificationQuestion || "What exactly needs to happen for this to be done?",
+                    }
+                });
+            } else if (isBig) {
                 setAiModal({
                     type: 'clarification',
                     isOpen: true,
                     data: {
                         originalTask: description,
-                        question: evaluation.clarificationQuestion || "Could you break this down further?",
+                        question: "This looks like a big one. Want to break it into focused micro-tasks?",
                         suggestions: evaluation.suggestion || []
                     }
                 });
@@ -594,6 +652,10 @@ export function Dashboard() {
         }
     };
 
+    const handleElaborateSubmit = (elaboratedDescription) => {
+        addTask(elaboratedDescription);
+    };
+
     const handleAcceptBreakdown = (subtasks) => {
         // Add all subtasks
         subtasks.forEach(st => addTask(st.description)); // Adds each as a separate task
@@ -679,14 +741,25 @@ export function Dashboard() {
         return "Good evening";
     };
 
+    const handleOnboardingComplete = async (name, taskDescriptions) => {
+        await setUserName(name);
+        if (taskDescriptions.length > 0) {
+            addMultipleTasks(taskDescriptions);
+        }
+    };
+
+    if (!loading && !userName) {
+        return <NewUserOnboarding onComplete={handleOnboardingComplete} />;
+    }
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50/50 p-8 font-sans text-slate-900 transition-colors duration-500 overflow-y-auto">
             <div className="max-w-2xl mx-auto pb-20">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-12">
                     <div className="flex items-center gap-3">
-                        <img src="/icons/icon48.png" alt="Todo Logo" className="w-8 h-8 rounded shadow-sm" />
-                        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Todo</h1>
+                        <img src="/icons/icon48.png" alt="Claritask Logo" className="w-8 h-8 rounded shadow-sm" />
+                        <h1 className="text-3xl font-light tracking-tight text-slate-900" style={{ fontFamily: "'DM Sans', sans-serif" }}>Claritask</h1>
                     </div>
                     <div className="flex items-center gap-4">
                         {tasks.some(t => !t.completed) && (
@@ -705,34 +778,20 @@ export function Dashboard() {
                         )}
                         <div className="flex gap-2">
                             <button
-                                onClick={() => setShowGamePlan(true)}
-                                className={cn(
-                                    "flex items-center justify-center p-2 rounded-xl transition-all font-semibold",
-                                    "bg-white border-2 border-slate-200 text-slate-700 hover:border-blue-400 shadow-sm"
-                                )}
-                                title="Game Plan"
-                            >
-                                <Target className="w-5 h-5 text-blue-500" />
-                            </button>
-                            <button
                                 onClick={() => setIsStatsOpen(true)}
                                 className={cn(
                                     "flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all font-semibold",
-                                    streak?.isFrozen
-                                        ? "bg-blue-50 text-blue-600 border-2 border-blue-200"
-                                        : !hasRecentTasks
-                                            ? "bg-white border-2 border-slate-200 text-slate-500 hover:border-slate-300 shadow-sm"
-                                            : "bg-orange-50 text-orange-600 border-2 border-orange-200"
+                                    !hasRecentTasks
+                                        ? "bg-white border-2 border-slate-200 text-slate-500 hover:border-slate-300 shadow-sm"
+                                        : "bg-orange-50 text-orange-600 border-2 border-orange-200"
                                 )}
                             >
-                                {streak?.isFrozen ? (
-                                    <Snowflake className="w-4 h-4 text-blue-500" />
-                                ) : !hasRecentTasks ? (
+                                {!hasRecentTasks ? (
                                     <Flame className="w-4 h-4 text-blue-400" />
                                 ) : (
                                     <Flame className="w-4 h-4 text-orange-500" />
                                 )}
-                                {streak?.count || 0}
+                                {streak || 0}
                             </button>
                         </div>
                     </div>
@@ -823,6 +882,16 @@ export function Dashboard() {
             </div>
 
             {/* AI Modals */}
+            {aiModal.type === 'elaborate' && (
+                <ElaborateModal
+                    isOpen={aiModal.isOpen}
+                    onClose={() => setAiModal({ ...aiModal, isOpen: false })}
+                    originalTask={aiModal.data.originalTask}
+                    elaboratePrompt={aiModal.data.elaboratePrompt}
+                    onSubmit={handleElaborateSubmit}
+                />
+            )}
+
             {aiModal.type === 'breakdown' && (
                 <BreakdownModal
                     isOpen={aiModal.isOpen}
@@ -866,11 +935,6 @@ export function Dashboard() {
                 onSave={handleSaveEdit}
             />
 
-            <OnboardingModal
-                isOpen={!loading && !userName}
-                onSave={setUserName}
-            />
-
             <AccomplishmentsModal
                 isOpen={isStatsOpen}
                 onClose={() => setIsStatsOpen(false)}
@@ -879,14 +943,6 @@ export function Dashboard() {
                 userName={userName}
                 tasks={tasks} // Pass tasks for local time distributions
                 hasRecentTasks={hasRecentTasks}
-            />
-
-            <GamePlanModal
-                isOpen={showGamePlan}
-                onClose={() => setShowGamePlan(false)}
-                userName={userName}
-                todayTasks={todayTasks}
-                onPinTask={pinTask}
             />
 
             <DailyRecapModal

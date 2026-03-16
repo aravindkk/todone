@@ -42,17 +42,12 @@ export function AccomplishmentsModal({ isOpen, onClose, stats, streak, userName,
             hideHeader={true}
         >
             <div className="flex items-center gap-4 mb-8 shrink-0">
-                <div className={cn(
-                    "p-3 rounded-xl",
-                    streak?.isFrozen ? "bg-blue-50 text-blue-500" : "bg-orange-50 text-orange-500"
-                )}>
-                    {streak?.isFrozen ? <Snowflake className="w-8 h-8" /> : <Flame className="w-8 h-8" />}
+                <div className="p-3 rounded-xl bg-orange-50 text-orange-500">
+                    <Flame className="w-8 h-8" />
                 </div>
                 <div>
-                    <h3 className="text-2xl font-bold text-slate-800">Streak: {streak?.count || 0} Days</h3>
-                    <p className="text-slate-500">
-                        {streak?.isFrozen ? "Streak frozen today. Relax!" : "Consistency is key. Look how far you've come!"}
-                    </p>
+                    <h3 className="text-2xl font-bold text-slate-800">Streak: {streak || 0} Days</h3>
+                    <p className="text-slate-500">Consistency is key. Look how far you've come!</p>
                 </div>
             </div>
 

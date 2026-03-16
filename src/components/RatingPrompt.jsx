@@ -26,7 +26,7 @@ export function RatingPrompt({ onDismiss }) {
                     <Star className="w-6 h-6 text-white fill-white" />
                 </div>
                 <div className="flex-1 text-center sm:text-left">
-                    <h3 className="font-semibold text-slate-800 text-lg">Enjoying Todo?</h3>
+                    <h3 className="font-semibold text-slate-800 text-lg">Enjoying Claritask?</h3>
                     <p className="text-slate-600 text-sm mt-0.5">
                         Your reviews help us grow and improve the AI productivity experience for everyone.
                     </p>

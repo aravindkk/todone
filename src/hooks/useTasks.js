@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { storage } from "../lib/storage";
 import { analytics } from "../services/analytics";
 
@@ -49,7 +49,7 @@ export function useTasks() {
         return streak;
     };
 
-    const streak = calculateStreak(tasks);
+    const streak = useMemo(() => calculateStreak(tasks), [tasks]);
 
     useEffect(() => {
         loadTasks();
@@ -225,16 +225,18 @@ export function useTasks() {
             heatmap[date] = (heatmap[date] || 0) + 1;
         });
 
-        // Quick Tasks (< 15 mins) & Long Tasks (> 4 hours)
-        // using timerDuration if available, else elapsed. If neither, we can't guess.
+        // Quick Tasks (< 4h) & Long Tasks (> 6h)
+        // Use time from creation to completion as the duration metric
         const quickTasks = completedTasks.filter(t => {
-            const duration = t.timerDuration ? t.timerDuration * 60 : (t.elapsedTime / 1000 / 60);
-            return duration > 0 && duration < 15; // < 15 mins
+            if (!t.createdAt || !t.completedAt) return false;
+            const durationMinutes = (new Date(t.completedAt) - new Date(t.createdAt)) / 1000 / 60;
+            return durationMinutes > 0 && durationMinutes < 240; // < 4 hours
         }).slice(0, 5);
 
         const longTasks = completedTasks.filter(t => {
-            const duration = t.timerDuration ? t.timerDuration * 60 : (t.elapsedTime / 1000 / 60);
-            return duration > 360; // > 6 hours
+            if (!t.createdAt || !t.completedAt) return false;
+            const durationMinutes = (new Date(t.completedAt) - new Date(t.createdAt)) / 1000 / 60;
+            return durationMinutes > 360; // > 6 hours
         }).slice(0, 5);
 
         // Hourly Activity (Last 7 days based on LOCAL TIME)

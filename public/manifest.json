@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Todo",
-  "version": "1.0.0",
+  "name": "Claritask - AI Todo Coach",
+  "version": "1.0.1",
   "description": "AI-powered productivity coach for getting things done",
   "chrome_url_overrides": {
     "newtab": "index.html"
@@ -14,7 +14,7 @@
     "storage"
   ],
   "action": {
-    "default_title": "Todo"
+    "default_title": "Claritask - AI Todo Coach"
   },
   "icons": {
     "16": "icons/icon16.png",

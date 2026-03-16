@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.DEV
+    ? 'http://localhost:3000/api'
+    : 'https://todone-six.vercel.app/api';
 
 const withLocalDate = (context = {}) => {
     const now = new Date();
@@ -22,21 +24,7 @@ export const aiService = {
         }
     },
 
-    // Bug 59: Game Plan Generation
-    generateGamePlan: async (userName, targetTasks, otherTasks, userContext = {}) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/generate-game-plan`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userName, targetTasks, otherTasks, userContext: withLocalDate(userContext) }),
-            });
-            if (response.status === 429) return { rateLimited: true };
-            return await response.json();
-        } catch (error) {
-            console.error('AI Service Error:', error);
-            return { error: true };
-        }
-    },
+    // Bug 59: Removed Game Plan Generation
 
     breakDownTask: async (taskDescription, userContext = {}) => {
         try {

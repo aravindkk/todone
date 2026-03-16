@@ -14,6 +14,8 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
     const workerRef = useRef(null);
     // Store target end time
     const targetTimeRef = useRef(null);
+    // Expose stopAlarm so the Dismiss button can call it
+    const stopAlarmRef = useRef(null);
 
     // Bug 42: Cleanly render URLs in the task title header
     const renderDescription = (text) => {
@@ -164,12 +166,12 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
                     audioCtx = null;
                 }
                 if (titleInterval) clearInterval(titleInterval);
-                document.title = "Todo";
-                window.removeEventListener('click', stopAlarm);
-                window.removeEventListener('keydown', stopAlarm); // Also stop on key press
+                document.title = "Claritask - AI Todo Coach";
+                window.removeEventListener('keydown', stopAlarm);
+                stopAlarmRef.current = null;
             };
 
-            window.addEventListener('click', stopAlarm);
+            stopAlarmRef.current = stopAlarm;
             window.addEventListener('keydown', stopAlarm);
 
             // Cleanup on unmount if component is removed while alarming
@@ -180,7 +182,7 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
 
         return () => {
             if (titleInterval) clearInterval(titleInterval);
-            document.title = "Todo";
+            document.title = "Claritask - AI Todo Coach";
         };
     }, [isActive, timeLeft]);
 
@@ -191,39 +193,44 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white flex flex-col items-center pt-24 pb-8 px-6 md:px-8 z-50 overflow-y-auto w-full h-full animate-in fade-in duration-500">
+        <div className="fixed inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white flex flex-col z-50 overflow-hidden animate-in fade-in duration-500">
             {/* Ambient Background Glows */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[128px] pointer-events-none" />
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[128px] pointer-events-none" />
 
-            <button
-                onClick={onExit}
-                className="fixed top-8 left-6 md:left-8 text-slate-400 hover:text-white transition-all flex items-center gap-2 z-50 bg-white/5 hover:bg-white/10 py-2.5 px-5 rounded-full backdrop-blur-md border border-white/10 shadow-lg"
-            >
-                <ArrowLeft className="w-5 h-5" />
-                Back to Dashboard
-            </button>
+            {/* Top bar */}
+            <div className="shrink-0 flex items-center px-6 pt-5 pb-2 z-10">
+                <button
+                    onClick={onExit}
+                    className="text-slate-400 hover:text-white transition-all flex items-center gap-2 bg-white/5 hover:bg-white/10 py-2 px-4 rounded-full backdrop-blur-md border border-white/10 shadow-lg text-sm"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back
+                </button>
+            </div>
 
-            <div className="w-full max-w-3xl mx-auto text-center mt-auto mb-8 sm:mb-16 shrink-0 z-10">
-                <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-white/70 leading-tight break-words tracking-tight drop-shadow-sm">
+            {/* Task title */}
+            <div className="shrink-0 w-full max-w-2xl mx-auto text-center px-6 py-4 z-10">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-white/70 leading-snug break-words tracking-tight drop-shadow-sm">
                     {renderDescription(task.description)}
                 </h2>
             </div>
 
-            <div className="flex flex-col items-center gap-8 shrink-0 mb-auto z-10 w-full max-w-md">
-                {/* Bug 25: Duration selection above/prominent */}
-                <div className="flex items-center gap-2 p-1.5 bg-white/5 rounded-full backdrop-blur-xl border border-white/10 shadow-xl mb-4">
+            {/* Timer + controls */}
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 z-10 w-full max-w-md mx-auto px-6 pb-6">
+                {/* Duration picker */}
+                <div className="flex items-center gap-2 p-1.5 bg-white/5 rounded-full backdrop-blur-xl border border-white/10 shadow-xl">
                     {[5, 10, 25].map(min => (
                         <button
                             key={min}
                             onClick={() => {
-                                targetTimeRef.current = null; // Reset target end time on new selection
+                                targetTimeRef.current = null;
                                 setTimeLeft(min * 60);
                                 selectedDurationRef.current = min;
-                                setIsActive(false); // Bug 56: Do not auto-start when selecting time
+                                setIsActive(false);
                             }}
                             className={cn(
-                                "px-6 py-2.5 rounded-full font-semibold transition-all duration-300",
+                                "px-6 py-2 rounded-full font-semibold transition-all duration-300",
                                 timeLeft === min * 60
                                     ? "bg-white text-indigo-950 shadow-md transform scale-105"
                                     : "bg-transparent text-slate-400 hover:text-white hover:bg-white/10"
@@ -234,14 +241,14 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
                     ))}
                 </div>
 
-                <div className="relative flex justify-center items-center w-full mb-8">
-                    {/* Glowing ring behind timer */}
+                {/* Timer display */}
+                <div className="relative flex justify-center items-center w-full">
                     <div className={cn(
                         "absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 rounded-full blur-[64px] transition-opacity duration-1000",
                         isActive ? "opacity-100" : "opacity-0"
                     )} />
                     <div className={cn(
-                        "text-[100px] sm:text-[140px] font-black leading-none tracking-tighter mb-4 font-mono tabular-nums transition-colors duration-1000 relative z-10 drop-shadow-2xl",
+                        "text-[72px] sm:text-[96px] font-black leading-none tracking-tighter font-mono tabular-nums transition-colors duration-1000 relative z-10 drop-shadow-2xl",
                         !isActive && timeLeft === 0 ? "text-red-400 animate-pulse" : "text-white"
                     )}>
                         {timeLeft === 0 && !isActive ? "DONE" : formatTime(timeLeft)}
@@ -249,49 +256,76 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
                 </div>
 
                 <div className="flex gap-4 w-full">
-                    <button
-                        onClick={() => {
-                            if (isActive) {
-                                // Pausing: recalculate exactly how much time is left and clear target
-                                if (targetTimeRef.current) {
-                                    const remaining = Math.max(0, Math.ceil((targetTimeRef.current - Date.now()) / 1000));
-                                    setTimeLeft(remaining);
-                                }
-                                targetTimeRef.current = null;
-                                setIsActive(false);
-                            } else {
-                                // Starting/Resuming: establish a new target time
-                                targetTimeRef.current = Date.now() + (timeLeft * 1000);
-                                setIsActive(true);
-                            }
-                        }}
-                        className={cn(
-                            "flex-1 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg active:scale-95 border",
-                            isActive
-                                ? "bg-white/10 text-slate-300 hover:bg-white/20 border-white/10 hover:border-white/20 backdrop-blur-md"
-                                : "bg-white text-indigo-950 hover:bg-slate-50 border-white hover:scale-105"
-                        )}
-                    >
-                        {isActive ? "Pause" : "Start"}
-                    </button>
+                    {timeLeft === 0 && !isActive ? (
+                        <>
+                            <button
+                                onClick={() => {
+                                    stopAlarmRef.current?.();
+                                    onExit();
+                                }}
+                                className="flex-1 py-4 bg-white/10 text-slate-300 hover:bg-white/20 border border-white/10 hover:border-white/20 backdrop-blur-md rounded-2xl font-bold text-lg transition-all shadow-lg active:scale-95 animate-pulse"
+                            >
+                                Dismiss
+                            </button>
+                            <button
+                                onClick={() => {
+                                    stopAlarmRef.current?.();
+                                    onComplete();
+                                    onExit();
+                                }}
+                                className="flex-1 group flex items-center justify-center gap-3 py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl transition-all shadow-lg shadow-emerald-500/20 border border-emerald-400/50 hover:border-emerald-300 active:scale-95 font-bold text-lg hover:scale-105"
+                            >
+                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Check className="w-4 h-4 text-white" />
+                                </div>
+                                Finish
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => {
+                                    if (isActive) {
+                                        if (targetTimeRef.current) {
+                                            const remaining = Math.max(0, Math.ceil((targetTimeRef.current - Date.now()) / 1000));
+                                            setTimeLeft(remaining);
+                                        }
+                                        targetTimeRef.current = null;
+                                        setIsActive(false);
+                                    } else {
+                                        targetTimeRef.current = Date.now() + (timeLeft * 1000);
+                                        setIsActive(true);
+                                    }
+                                }}
+                                className={cn(
+                                    "flex-1 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg active:scale-95 border",
+                                    isActive
+                                        ? "bg-white/10 text-slate-300 hover:bg-white/20 border-white/10 hover:border-white/20 backdrop-blur-md"
+                                        : "bg-white text-indigo-950 hover:bg-slate-50 border-white hover:scale-105"
+                                )}
+                            >
+                                {isActive ? "Pause" : "Start"}
+                            </button>
 
-                    <button
-                        onClick={() => {
-                            onComplete();
-                            onExit();
-                        }}
-                        className="flex-1 group flex items-center justify-center gap-3 py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl transition-all shadow-lg shadow-emerald-500/20 border border-emerald-400/50 hover:border-emerald-300 active:scale-95 font-bold text-lg hover:scale-105"
-                    >
-                        <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Check className="w-4 h-4 text-white" />
-                        </div>
-                        Finish
-                    </button>
+                            <button
+                                onClick={() => {
+                                    onComplete();
+                                    onExit();
+                                }}
+                                className="flex-1 group flex items-center justify-center gap-3 py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl transition-all shadow-lg shadow-emerald-500/20 border border-emerald-400/50 hover:border-emerald-300 active:scale-95 font-bold text-lg hover:scale-105"
+                            >
+                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <Check className="w-4 h-4 text-white" />
+                                </div>
+                                Finish
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 <button
                     onClick={onExit}
-                    className="mt-6 text-slate-400 hover:text-white transition-colors text-sm font-medium tracking-wide uppercase"
+                    className="text-slate-400 hover:text-white transition-colors text-sm font-medium tracking-wide uppercase"
                 >
                     Take a Break
                 </button>

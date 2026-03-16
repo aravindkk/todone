@@ -49,7 +49,7 @@ function checkDailyLimit(req, res, next) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const TODONE_SYSTEM_INSTRUCTION = `You are Todone AI, a supportive productivity coach.
+const TODONE_SYSTEM_INSTRUCTION = `You are Claritask AI, a supportive productivity coach.
 Your personality: Warm, brief, and actionable.
 Guidelines:
 - Keep responses under 3 sentences.
@@ -90,11 +90,19 @@ app.post('/api/evaluate-task', checkDailyLimit, async (req, res) => {
         if (taskNotes) notesStr += `User's contextual notes (past help/resources): ${taskNotes}. `;
 
         // Prepend system instruction
-        const prompt = `Context: ${contextStr}${notesStr}
-Task: "${taskDescription}"
-Specific & <1hr? JSON:
-{ "isSpecific": bool, "canCompleteInOneHour": bool, "clarificationQuestion": "str?", "suggestion": [{"description": "str", "estimatedMinutes": int}] }
-If specific, suggestion=[]. If not, 2-3 suggestions.`;
+        const prompt = `${contextStr}${notesStr}Task: "${taskDescription}"
+
+Classify as one of: TOO_VAGUE, TOO_BIG, GOOD.
+TOO_VAGUE = can't picture what "done" looks like (e.g. "work stuff", "do project", "handle it").
+TOO_BIG = clear goal but likely 2+ hours (e.g. "write quarterly report", "build login page", "prepare for presentation").
+GOOD = specific and completable within ~2 hours.
+
+Return JSON only:
+{"type":"TOO_VAGUE"|"TOO_BIG"|"GOOD","elaboratePrompt":"one warm question if TOO_VAGUE, else null","suggestion":[{"description":"...","estimatedMinutes":N}]}
+
+If TOO_VAGUE: elaboratePrompt=question, suggestion=[].
+If TOO_BIG: elaboratePrompt=null, suggestion=3-4 micro-tasks each under 45min.
+If GOOD: elaboratePrompt=null, suggestion=[].`;
 
         const result = await model.generateContent(prompt);
         const text = result.response.text();
@@ -107,7 +115,7 @@ If specific, suggestion=[]. If not, 2-3 suggestions.`;
 
         try {
             const data = JSON.parse(jsonStr);
-            if (data.suggestion && !Array.isArray(data.suggestion)) { // Fix: ensure array
+            if (data.suggestion && !Array.isArray(data.suggestion)) {
                 data.suggestion = [{ description: data.suggestion, estimatedMinutes: 15 }];
             }
             res.json(data);
@@ -219,41 +227,7 @@ Respond with JSON only:
     }
 });
 
-// Bug 59: Endpoint: Generate Game Plan
-app.post('/api/generate-game-plan', checkDailyLimit, async (req, res) => {
-    try {
-        const { userName, targetTasks, otherTasks, userContext } = req.body;
-        const model = getModel('gemini-2.5-flash');
-
-        const localTimeInfo = userContext?.localDate ? `\nToday's Date: ${userContext.localDate}` : "";
-
-        const prompt = `${TODONE_SYSTEM_INSTRUCTION}
-You are an expert productivity coach.
-User: ${userName || 'Friend'}
-${localTimeInfo}
-
-Top Priority Targets (these must be done today):
-${targetTasks.map(t => `- ${t}`).join('\n')}
-
-Other Tasks on their plate:
-${otherTasks.length > 0 ? otherTasks.map(t => `- ${t}`).join('\n') : "(None)"}
-
-Generate a "Game Plan" for the day. 
-Address the user by name. Be encouraging, highly strategic, and concise.
-Draft a timeline (Morning/Afternoon/Evening or Time-blocked) incorporating these tasks, heavily prioritizing the "Targets". 
-Give a short tip on how to handle the other tasks.
-
-Respond with pure text formatted with markdown (bold, bullet points, headers like "🎯 Your Targets", "🗓️ The Plan"). Do not wrap in JSON.
-`;
-
-        const result = await model.generateContent(prompt);
-        const plan = result.response.text();
-        res.json({ plan });
-    } catch (error) {
-        console.error('Gemini API Error:', error);
-        res.status(500).json({ error: 'Failed to generate game plan' });
-    }
-});
+// Bug 59: Removed generate-game-plan
 
 // Endpoint: Chat Help
 app.post('/api/chat-help', checkDailyLimit, async (req, res) => {
