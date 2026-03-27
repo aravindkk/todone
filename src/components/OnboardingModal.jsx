@@ -23,7 +23,7 @@ export function OnboardingModal({ isOpen, onSave }) {
 
                 <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome to Todo!</h2>
                 <p className="text-slate-500 mb-8">
-                    Your personal AI productivity companion.
+                    Your personal productivity coach.
                     <br />
                     What should I call you?
                 </p>

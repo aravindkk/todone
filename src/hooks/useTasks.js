@@ -21,31 +21,39 @@ export function useTasks() {
             }
         });
 
-        let streak = 0;
         const normalize = d => d.toLocaleDateString('en-CA');
+        // Returns the Sunday that starts the week containing d (Sun–Sat weeks)
+        const getWeekKey = (d) => {
+            const copy = new Date(d);
+            copy.setDate(copy.getDate() - copy.getDay());
+            return copy.toLocaleDateString('en-CA');
+        };
 
-        // Start checking from today
-        let current = new Date();
-        let dateStr = normalize(current);
+        let streak = 0;
+        const weekSkips = {}; // weekKey → skipped days used
 
-        // If today has no completed tasks yet, check if yesterday kept the streak alive
-        if (!counts[dateStr]) {
+        const current = new Date();
+        current.setHours(0, 0, 0, 0);
+
+        // Free pass for today — the day might still be in progress
+        if (!counts[normalize(current)]) {
             current.setDate(current.getDate() - 1);
-            dateStr = normalize(current);
-            if (!counts[dateStr]) {
-                return 0;
-            }
         }
 
-        while (true) {
+        // Walk backwards: each week allows up to 2 skip days without breaking the streak
+        for (let i = 0; i < 365; i++) {
+            const dateStr = normalize(current);
             if (counts[dateStr]) {
                 streak++;
-                current.setDate(current.getDate() - 1);
-                dateStr = normalize(current);
             } else {
-                break;
+                const weekKey = getWeekKey(current);
+                weekSkips[weekKey] = (weekSkips[weekKey] || 0) + 1;
+                if (weekSkips[weekKey] > 2) break;
+                // Skip consumed — continue walking without incrementing streak
             }
+            current.setDate(current.getDate() - 1);
         }
+
         return streak;
     };
 

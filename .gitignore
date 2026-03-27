@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# Debug/scratch scripts
+server/test-key.js
+server/debug-env.js
+
 # Logs
 logs
 *.log

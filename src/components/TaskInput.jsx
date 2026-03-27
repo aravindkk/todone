@@ -2,6 +2,19 @@ import { useState, useEffect, useRef } from "react";
 import { Plus, Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
 
+const PLACEHOLDERS = [
+    "What's the one thing that would make today a win?",
+    "What's been sitting on your mind?",
+    "What needs to move forward today?",
+    "What would make you feel accomplished tonight?",
+    "What's the next step?",
+    "What do you need to get done?",
+    "What's most important right now?",
+];
+
+// Stable per day — changes overnight, consistent within the day
+const dailyPlaceholder = PLACEHOLDERS[new Date().getDate() % PLACEHOLDERS.length];
+
 export function TaskInput({ onAddTask, isEvaluating = false }) {
     const [value, setValue] = useState("");
 
@@ -30,7 +43,7 @@ export function TaskInput({ onAddTask, isEvaluating = false }) {
                     type="text"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
-                    placeholder={isEvaluating ? "Evaluating task..." : "What do you need to get done?"}
+                    placeholder={isEvaluating ? "Evaluating task..." : dailyPlaceholder}
                     disabled={isEvaluating}
                     className={cn(
                         "w-full px-4 py-3 pr-12 rounded-xl border-2 border-transparent bg-white shadow-sm",

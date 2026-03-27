@@ -28,7 +28,7 @@ export function RatingPrompt({ onDismiss }) {
                 <div className="flex-1 text-center sm:text-left">
                     <h3 className="font-semibold text-slate-800 text-lg">Enjoying ClariTask?</h3>
                     <p className="text-slate-600 text-sm mt-0.5">
-                        Your reviews help us grow and improve the AI productivity experience for everyone.
+                        Your reviews help us grow and improve ClariTask for everyone.
                     </p>
                 </div>
                 <div className="shrink-0 mt-3 sm:mt-0 w-full sm:w-auto">

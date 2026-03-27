@@ -53,7 +53,7 @@ export function TaskNotesModal({ isOpen, onClose, task, type, onSave }) {
                             autoFocus
                         />
                         <p className="text-xs text-slate-500 mt-2">
-                            We'll save this in your notes so the AI can remind you next time you face a similar task.
+                            We'll save this in your notes so ClariTask can remind you next time you face a similar task.
                         </p>
                     </div>
 
