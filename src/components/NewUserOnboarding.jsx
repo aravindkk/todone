@@ -70,7 +70,7 @@ export function NewUserOnboarding({ onComplete }) {
                     <p className="text-2xl text-slate-200 font-light mb-3 max-w-sm mx-auto leading-snug">
                         The mental weight of<br />unfinished tasks ends here.
                     </p>
-                    <p className="text-slate-400 mb-14 text-sm">Your AI-powered focus coach</p>
+                    <p className="text-slate-400 mb-14 text-sm">Your personal focus coach</p>
                     <button
                         onClick={() => setStep(2)}
                         className="flex items-center gap-2 mx-auto px-8 py-4 bg-white text-slate-900 font-semibold rounded-2xl hover:bg-slate-100 transition-all shadow-xl text-lg group"

@@ -72,7 +72,7 @@ export function ChatModal({ isOpen, onClose, task, onSend, history, loading, onA
                             Help with: {task.description}
                         </h3>
                         <p className="text-xs text-slate-500">
-                            Todo AI Assistant
+                            ClariTask Coach
                         </p>
                     </div>
                 </div>

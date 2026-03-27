@@ -172,9 +172,9 @@ export function TaskCard({
                         <button
                             onClick={() => onChat && onChat(task.id)}
                             className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 hover:bg-orange-200 transition-colors"
-                            title="Stuck? AI can help"
+                            title="Stuck? ClariTask can help"
                         >
-                            Stuck? AI can help →
+                            Stuck? ClariTask can help →
                         </button>
                     ) : (
                         <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
@@ -216,7 +216,7 @@ export function TaskCard({
                             <button
                                 onClick={() => onChat(task.id)}
                                 className="p-1.5 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded-md transition-colors"
-                                title="Ask AI for help"
+                                title="Ask ClariTask for help"
                             >
                                 <MessageSquare className="w-4 h-4" />
                             </button>
