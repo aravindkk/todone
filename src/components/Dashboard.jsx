@@ -883,6 +883,25 @@ export function Dashboard() {
                             <button onClick={() => setAiModal({ isOpen: true, type: 'elaborate', data: { originalTask: "do the thing", elaboratePrompt: "What exactly does 'do the thing' mean to you?" } })} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">Elaborate modal</button>
                             <button onClick={() => setAiModal({ isOpen: true, type: 'warning', data: { message: "You have reached the limit of 50 AI requests for the day. This will reset tomorrow." } })} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">AI warning</button>
                         </div>
+                        <p className="font-semibold text-yellow-800 mt-3 mb-2">🎉 Personality toasts</p>
+                        <div className="flex flex-wrap gap-2">
+                            <button onClick={() => setCelebration({ message: "First one down. That's the hardest part.", intensity: 'normal' })} className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-900 rounded">Toast: first task</button>
+                            <button onClick={() => setCelebration({ message: "Quick win in 12 min. 💪 Those add up.", intensity: 'normal' })} className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-900 rounded">Toast: quick win</button>
+                            <button onClick={() => setCelebration({ message: "On a roll — keep that energy. 🔥", intensity: 'normal' })} className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-900 rounded">Toast: on a roll</button>
+                            <button onClick={() => setCelebration({ message: "Finally got there — that one was stubborn. Done in 3 days.", intensity: 'heavy' })} className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-900 rounded">Toast: stubborn task</button>
+                            <button onClick={() => setCelebration({ message: "That's everything for today. Nicely done. 🎉", intensity: 'heavy' })} className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-900 rounded">Toast: all done</button>
+                            <button onClick={() => setCelebration({ message: "3 days in a row. The habit is starting. 🌱", intensity: 'heavy' })} className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded">Streak: 3 days</button>
+                            <button onClick={() => setCelebration({ message: "A full week. You're building something real. 🔥", intensity: 'heavy' })} className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded">Streak: 7 days</button>
+                            <button onClick={() => setCelebration({ message: "Two weeks straight. This is who you are now. 💪", intensity: 'heavy' })} className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded">Streak: 14 days</button>
+                            <button onClick={() => setCelebration({ message: "30 days. That's not a streak — that's a lifestyle. 🏆", intensity: 'heavy' })} className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded">Streak: 30 days</button>
+                        </div>
+                        <p className="font-semibold text-yellow-800 mt-3 mb-2">💬 Chat welcome line</p>
+                        <div className="flex flex-wrap gap-2">
+                            {tasks.filter(t => !t.completed).slice(0, 3).map(t => (
+                                <button key={t.id} onClick={() => handleChatOpen(t.id)} className="px-2 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded truncate max-w-[200px]">Chat: {t.description.slice(0, 30)}</button>
+                            ))}
+                            {tasks.filter(t => !t.completed).length === 0 && <span className="text-yellow-700 italic">Add a task first to test chat</span>}
+                        </div>
                     </div>
                 )}
 
