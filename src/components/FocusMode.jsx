@@ -166,7 +166,7 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
                     audioCtx = null;
                 }
                 if (titleInterval) clearInterval(titleInterval);
-                document.title = "Claritask - AI Todo Coach";
+                document.title = "ClariTask - AI Todo Coach";
                 window.removeEventListener('keydown', stopAlarm);
                 stopAlarmRef.current = null;
             };
@@ -182,7 +182,7 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
 
         return () => {
             if (titleInterval) clearInterval(titleInterval);
-            document.title = "Claritask - AI Todo Coach";
+            document.title = "ClariTask - AI Todo Coach";
         };
     }, [isActive, timeLeft]);
 

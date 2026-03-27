@@ -1,7 +1,7 @@
 {
-  "name": "todone-server",
+  "name": "claritask-server",
   "version": "1.0.0",
-  "description": "Backend for Todone Chrome Extension",
+  "description": "Backend for ClariTask Chrome Extension",
   "main": "server.js",
   "type": "module",
   "scripts": {

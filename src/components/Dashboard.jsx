@@ -758,8 +758,8 @@ export function Dashboard() {
                 {/* Header */}
                 <div className="flex justify-between items-center mb-12">
                     <div className="flex items-center gap-3">
-                        <img src="/icons/icon48.png" alt="Claritask Logo" className="w-8 h-8 rounded shadow-sm" />
-                        <h1 className="text-3xl font-light tracking-tight text-slate-900" style={{ fontFamily: "'DM Sans', sans-serif" }}>Claritask</h1>
+                        <img src="/icons/icon48.png" alt="ClariTask Logo" className="w-8 h-8 rounded shadow-sm" />
+                        <h1 className="text-3xl font-light tracking-tight text-slate-900" style={{ fontFamily: "'DM Sans', sans-serif" }}>ClariTask</h1>
                     </div>
                     <div className="flex items-center gap-4">
                         {tasks.some(t => !t.completed) && (

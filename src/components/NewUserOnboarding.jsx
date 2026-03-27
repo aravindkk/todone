@@ -64,8 +64,8 @@ export function NewUserOnboarding({ onComplete }) {
             <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
                 <div className="text-center animate-in fade-in duration-700 px-8">
                     <div className="flex items-center justify-center gap-3 mb-10">
-                        <img src="/icons/icon128.png" className="w-12 h-12 rounded-xl shadow-2xl" alt="Claritask" />
-                        <h1 className="text-4xl font-bold" style={{ fontFamily: "'DM Sans', sans-serif" }}>Claritask</h1>
+                        <img src="/icons/icon128.png" className="w-12 h-12 rounded-xl shadow-2xl" alt="ClariTask" />
+                        <h1 className="text-4xl font-bold" style={{ fontFamily: "'DM Sans', sans-serif" }}>ClariTask</h1>
                     </div>
                     <p className="text-2xl text-slate-200 font-light mb-3 max-w-sm mx-auto leading-snug">
                         The mental weight of<br />unfinished tasks ends here.
@@ -92,7 +92,7 @@ export function NewUserOnboarding({ onComplete }) {
                         <Sparkles className="w-8 h-8 text-blue-600" />
                     </div>
                     <p className="text-slate-500 text-base mb-1 leading-relaxed">
-                        Hi — I'm Claritask, your productivity coach.
+                        Hi — I'm ClariTask, your productivity coach.
                     </p>
                     <p className="text-slate-500 text-base mb-8 leading-relaxed">
                         I'll help you cut through the noise, focus on what matters, and actually get things done.

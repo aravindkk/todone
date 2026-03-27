@@ -49,7 +49,7 @@ function checkDailyLimit(req, res, next) {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const TODONE_SYSTEM_INSTRUCTION = `You are Claritask AI, a supportive productivity coach.
+const CLARITASK_SYSTEM_INSTRUCTION = `You are ClariTask AI, a supportive productivity coach.
 Your personality: Warm, brief, and actionable.
 Guidelines:
 - Keep responses under 3 sentences.
@@ -249,7 +249,7 @@ app.post('/api/chat-help', checkDailyLimit, async (req, res) => {
 
         const historyText = chatHistory.map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`).join('\n');
 
-        const prompt = `${TODONE_SYSTEM_INSTRUCTION}
+        const prompt = `${CLARITASK_SYSTEM_INSTRUCTION}
 Context: ${contextStr}${notesStr}
 You are an expert productivity coach helping the user with this specific task: "${taskDescription}".
 They are asking for help or advice.
@@ -260,7 +260,7 @@ ${historyText}
 User: "${chatHistory[chatHistory.length - 1].content}"
 
 Instructions:
-1. Act as Todone AI (brief, helpful, encouraging).
+1. Act as ClariTask AI (brief, helpful, encouraging).
 2. If the user asks to create tasks (e.g., "Add a task to buy milk", "Break this down"), return a list of specific, actionable tasks in suggestedTasks.
 3. Do NOT auto-create. Give the user the choice.
 
@@ -338,7 +338,7 @@ app.post('/api/activity-insights', checkDailyLimit, async (req, res) => {
         const { hourlyData, userContext } = req.body;
         const model = getModel();
 
-        const prompt = `${TODONE_SYSTEM_INSTRUCTION}
+        const prompt = `${CLARITASK_SYSTEM_INSTRUCTION}
 Context: User local time distribution of task creations and completions over the last 7 days.
 Data: ${JSON.stringify(hourlyData)}
 
@@ -357,7 +357,7 @@ app.post('/api/daily-recap', checkDailyLimit, async (req, res) => {
         const { tasks, previousDayName, userName } = req.body;
         const model = getModel();
 
-        let prompt = `${TODONE_SYSTEM_INSTRUCTION}
+        let prompt = `${CLARITASK_SYSTEM_INSTRUCTION}
 Context: The user (${userName || 'User'}) is opening the app for the first time today.
 Task Data from the previous weekday (${previousDayName}):
 `;
@@ -381,7 +381,7 @@ Generate a warm, encouraging 1-2 sentence summary of what they accomplished on $
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
-        console.log(`Todone AI backend running on port ${PORT} `);
+        console.log(`ClariTask AI backend running on port ${PORT} `);
     });
 }
 
