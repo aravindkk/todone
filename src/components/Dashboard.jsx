@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { TaskInput } from "./TaskInput";
 import { TaskCard } from "./TaskCard";
 import { StreakCounter } from "./StreakCounter";
@@ -92,6 +92,26 @@ export function Dashboard() {
         history: [],
         loading: false
     });
+
+    // Streak milestone toasts
+    const prevStreakRef = useRef(null);
+    useEffect(() => {
+        if (!streak || loading) return;
+        const prev = prevStreakRef.current;
+        prevStreakRef.current = streak;
+        if (prev === null) return; // Don't fire on initial load
+        const milestones = [3, 7, 14, 30];
+        const hit = milestones.find(m => streak >= m && (prev === null || prev < m));
+        if (hit) {
+            const msgs = {
+                3: "3 days in a row. The habit is starting. 🌱",
+                7: "A full week. You're building something real. 🔥",
+                14: "Two weeks straight. This is who you are now. 💪",
+                30: "30 days. That's not a streak — that's a lifestyle. 🏆",
+            };
+            setCelebration({ message: msgs[hit], intensity: 'heavy' });
+        }
+    }, [streak, loading]);
 
     // Rating Prompt Logic
     const [showRating, setShowRating] = useState(false);
@@ -322,12 +342,36 @@ export function Dashboard() {
 
             const ageMs = new Date() - new Date(task.createdAt);
             const ageDays = ageMs / (1000 * 60 * 60 * 24);
-
-            // Celebration
+            const ageMinutes = ageMs / (1000 * 60);
             const humanDuration = formatDurationHuman(ageMs);
-            const intensity = ageDays > 3 ? 'heavy' : 'normal';
-            const message = `You crushed this in ${humanDuration}! ${ageDays > 3 ? 'Way to stick with it!' : 'Great job!'}`;
 
+            const completedTodayCount = tasks.filter(t =>
+                t.completed && t.completedAt &&
+                new Date(t.completedAt).toLocaleDateString('en-CA') === new Date().toLocaleDateString('en-CA')
+            ).length;
+            const openTodayCount = tasks.filter(t =>
+                !t.completed && normalizeDate(t.scheduledDate) <= today
+            ).length;
+
+            // Context-aware celebration message
+            let message;
+            if (openTodayCount === 0) {
+                message = "That's everything for today. Nicely done. 🎉";
+            } else if ((task.moveCount || 0) >= 2) {
+                message = `Finally got there — that one was stubborn. Done in ${humanDuration}.`;
+            } else if (completedTodayCount >= 2) {
+                message = "On a roll — keep that energy. 🔥";
+            } else if (ageMinutes < 30) {
+                message = `Quick win in ${humanDuration}. 💪 Those add up.`;
+            } else if (ageDays > 3) {
+                message = `Took ${humanDuration}, but you got there. That's what matters.`;
+            } else if (completedTodayCount === 0) {
+                message = "First one down. That's the hardest part.";
+            } else {
+                message = `Done in ${humanDuration}. Nice work.`;
+            }
+
+            const intensity = ageDays > 3 ? 'heavy' : 'normal';
             setCelebration({ message, intensity });
 
             // Notes Prompt
@@ -544,7 +588,7 @@ export function Dashboard() {
             setChatModal({
                 isOpen: true,
                 task: task,
-                history: [],
+                history: [{ role: 'ai', content: "Let's think through this together." }],
                 loading: false
             });
         }
@@ -756,8 +800,14 @@ export function Dashboard() {
     );
 
     const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return "Good morning";
+        const now = new Date();
+        const hour = now.getHours();
+        const day = now.getDay(); // 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+        if (hour < 12) {
+            if (day === 1) return "Happy Monday";
+            if (day === 5) return "Happy Friday";
+            return "Good morning";
+        }
         if (hour < 18) return "Good afternoon";
         return "Good evening";
     };
@@ -881,7 +931,18 @@ export function Dashboard() {
                             <TaskList
                                 tasks={visibleTodayTasks}
                                 title="Today"
-                                emptyMsg={tomorrowTasks.length === 0 && laterTasks.length === 0 ? "No tasks yet. You're free!" : "No tasks for today."}
+                                emptyMsg={(() => {
+                                    const hasNoTasksAnywhere = tomorrowTasks.length === 0 && laterTasks.length === 0;
+                                    const allDoneToday = tasks.some(t => t.completed && new Date(t.completedAt || 0).toLocaleDateString('en-CA') === new Date().toLocaleDateString('en-CA'));
+                                    const hour = new Date().getHours();
+                                    if (hasNoTasksAnywhere && !allDoneToday) {
+                                        return hour < 12 ? "Fresh start. What's the one thing that matters today?" : "Nothing on the list. Add something and let's go.";
+                                    }
+                                    if (hasNoTasksAnywhere && allDoneToday) {
+                                        return "You cleared your list. Take a breath — you earned it. 🎉";
+                                    }
+                                    return "No tasks for today.";
+                                })()}
                                 isSortable={true}
                                 onStartTimer={startTimer}
                             />

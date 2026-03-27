@@ -214,6 +214,11 @@ export function FocusMode({ task, initialDuration, onComplete, onExit }) {
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-100 to-white/70 leading-snug break-words tracking-tight drop-shadow-sm">
                     {renderDescription(task.description)}
                 </h2>
+                {isActive && (
+                    <p className="mt-3 text-sm text-white/50 italic">
+                        Just this one thing. Everything else can wait.
+                    </p>
+                )}
             </div>
 
             {/* Timer + controls */}

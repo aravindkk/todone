@@ -168,9 +168,19 @@ export function TaskCard({
                 )}
 
                 {isMoved && (
-                    <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                        Moved {task.moveCount}x
-                    </span>
+                    task.moveCount >= 3 ? (
+                        <button
+                            onClick={() => onChat && onChat(task.id)}
+                            className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 hover:bg-orange-200 transition-colors"
+                            title="Stuck? AI can help"
+                        >
+                            Stuck? AI can help →
+                        </button>
+                    ) : (
+                        <span className="bg-orange-100 text-orange-600 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                            Moved {task.moveCount}x
+                        </span>
+                    )
                 )}
 
                 <div className={cn(

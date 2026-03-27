@@ -14,11 +14,11 @@ export function TaskLimitWarningModal({ isOpen, onClose, onProceed }) {
                 <div className="p-4 bg-orange-50 rounded-2xl text-orange-500 mb-2">
                     <AlertCircle className="w-10 h-10" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-800">Slow down a bit!</h3>
+                <h3 className="text-xl font-bold text-slate-800">That's a full day already.</h3>
                 <p className="text-slate-600 text-sm px-2">
-                    It's great to focus on only <span className="font-semibold text-slate-800">5 tasks</span> in a day.
+                    You've got <span className="font-semibold text-slate-800">5 solid tasks</span> lined up — that's a focused, meaningful day.
                     <br /><br />
-                    More tasks can add to your stress levels. Do you still want to add this task?
+                    Adding more risks spreading yourself thin. Still want to add this one?
                 </p>
                 <div className="w-full pt-4 flex gap-3">
                     <button
