@@ -425,9 +425,11 @@ export function Dashboard() {
                 const activeTask = { ...newTasks[oldIndex] };
                 const overTask = newTasks[newIndex];
 
-                // Bug 47: Move task date if dragged across categories
+                // Bug 47: Move task date if dragged across categories — always store as local midnight
                 if (normalizeDate(activeTask.scheduledDate) !== normalizeDate(overTask.scheduledDate)) {
-                    activeTask.scheduledDate = overTask.scheduledDate;
+                    const d = overTask.scheduledDate ? new Date(overTask.scheduledDate) : new Date();
+                    d.setHours(0, 0, 0, 0);
+                    activeTask.scheduledDate = d.toISOString();
                 }
 
                 newTasks[oldIndex] = activeTask;
@@ -626,10 +628,16 @@ export function Dashboard() {
         const task = tasks.find(t => t.id === id);
         if (!task) return;
 
-        // Build local-midnight of whichever day the task is currently on, then advance by 1
+        // Always move to at least tomorrow relative to today.
+        // If the task is already scheduled in the future, advance from its date instead.
+        const todayMidnight = new Date();
+        todayMidnight.setHours(0, 0, 0, 0);
+
         const currentScheduled = task.scheduledDate ? new Date(task.scheduledDate) : new Date();
-        const nextDay = new Date(currentScheduled);
-        nextDay.setHours(0, 0, 0, 0); // normalise to local midnight first
+        currentScheduled.setHours(0, 0, 0, 0);
+
+        const base = currentScheduled > todayMidnight ? currentScheduled : todayMidnight;
+        const nextDay = new Date(base);
         nextDay.setDate(nextDay.getDate() + 1);
 
         const newCount = (task.moveCount || 0) + 1;
@@ -848,10 +856,9 @@ export function Dashboard() {
                             strategy={verticalListSortingStrategy}
                         >
                             {isEvaluating && (
-                                <div className="mb-2 px-4 py-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-3 animate-pulse">
-                                    <div className="w-5 h-5 rounded-full border-2 border-slate-200 flex-shrink-0" />
-                                    <div className="flex-1 h-4 bg-slate-100 rounded-md" />
-                                    <div className="w-16 h-3 bg-slate-100 rounded-md" />
+                                <div className="mb-2 px-4 py-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+                                    <div className="w-5 h-5 rounded-full border-2 border-indigo-200 border-t-indigo-500 animate-spin flex-shrink-0" />
+                                    <span className="text-sm text-slate-400">Evaluating task...</span>
                                 </div>
                             )}
                             <TaskList

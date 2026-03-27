@@ -7,10 +7,10 @@ export function EditTaskModal({ isOpen, onClose, initialTask, initialDate, initi
     const [dateValue, setDateValue] = useState("");
     const [notesValue, setNotesValue] = useState("");
 
-    // Helper to extract YYYY-MM-DD from ISO string
+    // Helper to extract local YYYY-MM-DD from ISO string
     const formatDateForInput = (isoString) => {
         if (!isoString) return "";
-        return new Date(isoString).toISOString().split('T')[0];
+        return new Date(isoString).toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
     };
 
     useEffect(() => {
@@ -22,10 +22,9 @@ export function EditTaskModal({ isOpen, onClose, initialTask, initialDate, initi
     const handleSubmit = (e) => {
         e.preventDefault();
         if (value.trim()) {
-            // Convert back to ISO String for consistency
-            const newDate = new Date(dateValue);
-            // Default to start of day
-            newDate.setHours(0, 0, 0, 0);
+            // Parse YYYY-MM-DD as local midnight (not UTC)
+            const [year, month, day] = dateValue.split('-').map(Number);
+            const newDate = new Date(year, month - 1, day, 0, 0, 0, 0);
             onSave(value, newDate.toISOString(), notesValue);
             onClose();
         }

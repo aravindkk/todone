@@ -73,7 +73,21 @@ export function useTasks() {
             await storage.set('todo_last_active_date', todayStr);
         }
 
-        setTasks(loadedTasks);
+        // Auto-rollover: bump any uncompleted past tasks to today's midnight
+        const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+        const rolledOver = loadedTasks.map(t => {
+            if (t.completed) return t;
+            const scheduled = new Date(t.scheduledDate || todayMidnight);
+            scheduled.setHours(0, 0, 0, 0);
+            if (scheduled < todayMidnight) {
+                return { ...t, scheduledDate: todayMidnight.toISOString() };
+            }
+            return t;
+        });
+        const didRollover = rolledOver.some((t, i) => t.scheduledDate !== loadedTasks[i].scheduledDate);
+        if (didRollover) await storage.set(TASKS_KEY, rolledOver);
+
+        setTasks(rolledOver);
         setUserName(loadedName);
         setInstallDate(iDate);
         setLoading(false);
@@ -90,6 +104,7 @@ export function useTasks() {
     };
 
     const addTask = (description) => {
+        const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
         const newTask = {
             id: Date.now(),
             description,
@@ -98,7 +113,7 @@ export function useTasks() {
             moveCount: 0,
             order: 0, // Default order
             createdAt: new Date().toISOString(),
-            scheduledDate: new Date().toISOString(), // Default to Today
+            scheduledDate: todayMidnight.toISOString(), // Local midnight
             emotion: null,
             confidence: null,
             elapsedTime: 0,
@@ -110,6 +125,7 @@ export function useTasks() {
     };
 
     const addMultipleTasks = (descriptions) => {
+        const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
         const newTasks = descriptions.map((desc, index) => ({
             id: Date.now() + index, // Ensure unique IDs
             description: desc,
@@ -118,7 +134,7 @@ export function useTasks() {
             moveCount: 0,
             order: 0,
             createdAt: new Date().toISOString(),
-            scheduledDate: new Date().toISOString(), // Default to Today
+            scheduledDate: todayMidnight.toISOString(), // Local midnight
             emotion: null,
             confidence: null,
             elapsedTime: 0,
