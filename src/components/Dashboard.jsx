@@ -19,6 +19,7 @@ import { TaskNotesModal } from "./TaskNotesModal";
 import { MentorshipModal } from "./MentorshipModal";
 import { TaskLimitWarningModal } from "./TaskLimitWarningModal";
 import { Confetti, Toast } from "./ui/Confetti";
+import { Dialog } from "./ui/Dialog";
 import { aiService } from "../services/ai";
 import { analytics } from "../services/analytics";
 import { storage } from "../lib/storage";
@@ -819,6 +820,22 @@ export function Dashboard() {
 
                 {showRating && <RatingPrompt onDismiss={handleDismissRating} />}
 
+                {/* Debug panel — toggle with: localStorage.setItem('claritask_debug','1') / removeItem */}
+                {localStorage.getItem('claritask_debug') === '1' && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-xs">
+                        <p className="font-semibold text-yellow-800 mb-2">🛠 Debug popups</p>
+                        <div className="flex flex-wrap gap-2">
+                            <button onClick={() => setDailyRecap({ isOpen: true, text: "Great work yesterday! You knocked out 3 tasks and made solid progress. Let's keep that momentum going today!" })} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">Morning recap</button>
+                            <button onClick={() => setFridaySummary({ isOpen: true, stats: { completedThisWeek: 8, longestCompletedTask: tasks.find(t => t.completed) || null } })} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">Friday wrap-up</button>
+                            <button onClick={() => setTaskLimitWarning({ isOpen: true, description: "test task" })} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">Task limit warning</button>
+                            <button onClick={() => setIsStatsOpen(true)} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">Stats / streak</button>
+                            <button onClick={() => setShowRating(true)} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">Rating prompt</button>
+                            <button onClick={() => setAiModal({ isOpen: true, type: 'elaborate', data: { originalTask: "do the thing", elaboratePrompt: "What exactly does 'do the thing' mean to you?" } })} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">Elaborate modal</button>
+                            <button onClick={() => setAiModal({ isOpen: true, type: 'warning', data: { message: "You have reached the limit of 50 AI requests for the day. This will reset tomorrow." } })} className="px-2 py-1 bg-yellow-100 hover:bg-yellow-200 text-yellow-900 rounded">AI warning</button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Input */}
                 <TaskInput onAddTask={handleAddTask} isEvaluating={isEvaluating} />
 
@@ -908,6 +925,13 @@ export function Dashboard() {
             </div>
 
             {/* AI Modals */}
+            {aiModal.type === 'warning' && (
+                <Dialog isOpen={aiModal.isOpen} onClose={() => setAiModal({ ...aiModal, isOpen: false })} className="bg-white/95 backdrop-blur-xl border border-white/20 max-w-sm" hideHeader>
+                    <p className="text-sm text-slate-600 mb-4">{aiModal.data?.message}</p>
+                    <button onClick={() => setAiModal({ ...aiModal, isOpen: false })} className="w-full py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors">Got it</button>
+                </Dialog>
+            )}
+
             {aiModal.type === 'elaborate' && (
                 <ElaborateModal
                     isOpen={aiModal.isOpen}
