@@ -223,6 +223,10 @@ export function Dashboard() {
             const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
             if (dayOfWeek === 0 || dayOfWeek === 6) return; // Skip weekends
 
+            // Only show during morning hours (5 AM – 12 PM)
+            const hour = today.getHours();
+            if (hour < 5 || hour >= 12) return;
+
             // Only show after at least 1 full day since install
             const daysSinceInstall = installDate ? (today - new Date(installDate)) / (1000 * 60 * 60 * 24) : 0;
             if (daysSinceInstall < 1) return;
@@ -386,7 +390,8 @@ export function Dashboard() {
     };
 
     const today = normalizeDate(new Date());
-    const tomorrow = normalizeDate(new Date(Date.now() + 86400000));
+    const tomorrowDate = new Date(); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrow = normalizeDate(tomorrowDate);
 
     const todayTasks = sortedTasks.filter(t => {
         // Bug 52: If completed, must have been completed today to show in today's section
@@ -440,9 +445,14 @@ export function Dashboard() {
         const openTasksCount = tasks.filter(t => !t.completed).length;
 
         if (openTasksCount >= 5) {
-            setTaskLimitWarning({ isOpen: true, description });
-            setIsEvaluating(false);
-            return;
+            const todayStr = new Date().toLocaleDateString('en-CA');
+            const lastWarningDate = await storage.get('todo_task_limit_warning_date', null);
+            if (lastWarningDate !== todayStr) {
+                await storage.set('todo_task_limit_warning_date', todayStr);
+                setTaskLimitWarning({ isOpen: true, description });
+                setIsEvaluating(false);
+                return;
+            }
         }
 
         await processTaskAdd(description);
@@ -616,8 +626,10 @@ export function Dashboard() {
         const task = tasks.find(t => t.id === id);
         if (!task) return;
 
+        // Build local-midnight of whichever day the task is currently on, then advance by 1
         const currentScheduled = task.scheduledDate ? new Date(task.scheduledDate) : new Date();
         const nextDay = new Date(currentScheduled);
+        nextDay.setHours(0, 0, 0, 0); // normalise to local midnight first
         nextDay.setDate(nextDay.getDate() + 1);
 
         const newCount = (task.moveCount || 0) + 1;
@@ -835,6 +847,13 @@ export function Dashboard() {
                             ]}
                             strategy={verticalListSortingStrategy}
                         >
+                            {isEvaluating && (
+                                <div className="mb-2 px-4 py-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-3 animate-pulse">
+                                    <div className="w-5 h-5 rounded-full border-2 border-slate-200 flex-shrink-0" />
+                                    <div className="flex-1 h-4 bg-slate-100 rounded-md" />
+                                    <div className="w-16 h-3 bg-slate-100 rounded-md" />
+                                </div>
+                            )}
                             <TaskList
                                 tasks={visibleTodayTasks}
                                 title="Today"

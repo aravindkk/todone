@@ -13,32 +13,32 @@ export function useTasks() {
 
     const calculateStreak = (currentTasks) => {
         const counts = {};
+        const toLocalDate = d => new Date(d).toLocaleDateString('en-CA');
         currentTasks.forEach(t => {
             if (t.completed && t.completedAt) {
-                const date = t.completedAt.split('T')[0];
+                const date = toLocalDate(t.completedAt);
                 counts[date] = (counts[date] || 0) + 1;
             }
         });
 
         let streak = 0;
-        const today = new Date();
-        const normalize = d => d.toISOString().split('T')[0];
+        const normalize = d => d.toLocaleDateString('en-CA');
 
         // Start checking from today
-        let current = new Date(today);
+        let current = new Date();
         let dateStr = normalize(current);
 
-        // If today doesn't have enough tasks yet, check if yesterday kept the streak alive
-        if ((counts[dateStr] || 0) < 3) {
+        // If today has no completed tasks yet, check if yesterday kept the streak alive
+        if (!counts[dateStr]) {
             current.setDate(current.getDate() - 1);
             dateStr = normalize(current);
-            if ((counts[dateStr] || 0) < 3) {
+            if (!counts[dateStr]) {
                 return 0;
             }
         }
 
         while (true) {
-            if ((counts[dateStr] || 0) >= 3) {
+            if (counts[dateStr]) {
                 streak++;
                 current.setDate(current.getDate() - 1);
                 dateStr = normalize(current);

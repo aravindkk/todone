@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Required for express-rate-limit behind Vercel proxy
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'OPTIONS'],
@@ -58,15 +59,22 @@ Guidelines:
 - Each subtask must be completable in under 1 hour`;
 
 function getModel() {
-    // Use gemini-2.0-flash-lite as it is the most robust current model
-    // Note: systemInstruction is passed but if it fails we might need to prepend manually.
-    // Let's try prepending manually to be safe against older SDKs/Models.
     return genAI.getGenerativeModel({
         model: 'gemini-2.0-flash-lite',
         generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 200,
+            maxOutputTokens: 500,
             responseMimeType: "application/json"
+        },
+    });
+}
+
+function getTextModel() {
+    return genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash-lite',
+        generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 300,
         },
     });
 }
@@ -125,8 +133,8 @@ If GOOD: elaboratePrompt=null, suggestion=[].`;
             throw new Error("Failed to parse JSON response");
         }
     } catch (error) {
-        console.error('Gemini API Error:', error);
-        res.status(500).json({ error: 'Failed to evaluate task' });
+        console.error('Gemini API Error:', error?.message || error, error?.status, error?.statusText);
+        res.status(500).json({ error: 'Failed to evaluate task', detail: error?.message });
     }
 });
 
@@ -336,7 +344,7 @@ Respond with JSON only:
 app.post('/api/activity-insights', checkDailyLimit, async (req, res) => {
     try {
         const { hourlyData, userContext } = req.body;
-        const model = getModel();
+        const model = getTextModel();
 
         const prompt = `${CLARITASK_SYSTEM_INSTRUCTION}
 Context: User local time distribution of task creations and completions over the last 7 days.
@@ -355,7 +363,7 @@ Provide 1-2 short, encouraging sentences of insight about when the user is most 
 app.post('/api/daily-recap', checkDailyLimit, async (req, res) => {
     try {
         const { tasks, previousDayName, userName } = req.body;
-        const model = getModel();
+        const model = getTextModel();
 
         let prompt = `${CLARITASK_SYSTEM_INSTRUCTION}
 Context: The user (${userName || 'User'}) is opening the app for the first time today.

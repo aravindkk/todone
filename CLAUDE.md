@@ -27,6 +27,12 @@ npm run build                   # frontend (required after every change; no hot 
 cd server && vercel --prod
 ```
 
+## Secrets — NEVER commit API keys
+`server/.env` holds `GEMINI_API_KEY`. It is git-ignored and must stay that way.
+- All secrets live in `.env` locally and in Vercel environment variables in production.
+- **Never** hardcode a key in source. **Never** `git add .env*`.
+- The original key (`AIzaSyD...`) was committed in the initial commit and is permanently in git history — Google already revoked it. If a new key is ever leaked, rotate it immediately at https://aistudio.google.com/app/apikey and update the Vercel env var.
+
 ## Known Gotchas (do not regress)
 
 **Timer accuracy**: Chrome throttles `setInterval` in inactive tabs. Use `Date.now()` delta on each tick — never increment a counter.

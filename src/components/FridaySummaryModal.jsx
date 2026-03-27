@@ -1,16 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CalendarDays, TrendingUp, Trophy } from 'lucide-react';
 import { Dialog } from './ui/Dialog';
 import { storage } from '../lib/storage';
 
+const FEEDBACK = {
+    sad: "Tough weeks build resilience. You showed up, and that counts more than you know. Next week is a fresh start — you've got this! 💙",
+    neutral: "Steady progress is still progress. Every task you finished moved you forward. Keep building on that momentum! 🌱",
+    happy: "That's the energy! You crushed it this week. Carry that momentum into next week and see what you can achieve! 🚀",
+};
+
 export function FridaySummaryModal({ isOpen, onClose, userName, stats }) {
+    const [feedback, setFeedback] = useState(null);
+
     if (!isOpen) return null;
 
     const handleRating = async (rating) => {
         const ratings = await storage.get('todo_weekly_ratings', []);
         ratings.push({ date: new Date().toISOString(), rating });
         await storage.set('todo_weekly_ratings', ratings);
-        onClose();
+        setFeedback(FEEDBACK[rating]);
     };
 
     return (
@@ -59,30 +67,44 @@ export function FridaySummaryModal({ isOpen, onClose, userName, stats }) {
             </div>
 
             <div className="text-center pb-2">
-                <h4 className="text-sm font-medium text-slate-700 mb-4">How did this week feel overall?</h4>
-                <div className="flex justify-center gap-4">
-                    <button
-                        onClick={() => handleRating('sad')}
-                        className="text-4xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full"
-                        title="Tough week"
-                    >
-                        😢
-                    </button>
-                    <button
-                        onClick={() => handleRating('neutral')}
-                        className="text-4xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full"
-                        title="It was okay"
-                    >
-                        😐
-                    </button>
-                    <button
-                        onClick={() => handleRating('happy')}
-                        className="text-4xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full"
-                        title="Great week!"
-                    >
-                        🥳
-                    </button>
-                </div>
+                {feedback ? (
+                    <div className="animate-in fade-in slide-in-from-bottom-2">
+                        <p className="text-sm text-slate-700 leading-relaxed mb-4">{feedback}</p>
+                        <button
+                            onClick={onClose}
+                            className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+                        >
+                            Have a great weekend!
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <h4 className="text-sm font-medium text-slate-700 mb-4">How did this week feel overall?</h4>
+                        <div className="flex justify-center gap-4">
+                            <button
+                                onClick={() => handleRating('sad')}
+                                className="text-4xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full"
+                                title="Tough week"
+                            >
+                                😢
+                            </button>
+                            <button
+                                onClick={() => handleRating('neutral')}
+                                className="text-4xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full"
+                                title="It was okay"
+                            >
+                                😐
+                            </button>
+                            <button
+                                onClick={() => handleRating('happy')}
+                                className="text-4xl hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full"
+                                title="Great week!"
+                            >
+                                🥳
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
         </Dialog>
     );
